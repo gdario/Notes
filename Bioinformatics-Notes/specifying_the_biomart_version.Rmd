@@ -1,0 +1,48 @@
+---
+title: "Specifying the biomaRt version"
+author: "Giovanni d'Ario"
+date: "5/4/2015"
+output: html_document
+---
+
+# The Problem
+
+In order to make an analysis based on biomaRt really reproducible we must be able to refer to a precise version of biomaRt. This is easy to do, and it is illustrated in the examples below. A nice and brief discussion can be found on [BioStar](https://www.biostars.org/p/52282/).
+
+# The Solution
+
+According to the biomaRt vignette, there are two ways to access the archived versions of biomaRt. The first one is to use the archive=TRUE option as shown below
+
+```{r load_biomart}
+library(biomaRt)
+listMarts(archive = TRUE)
+```
+
+We can select a particular release using the commands shown below.
+
+```{r use_ensembl_46}
+ensembl = useMart("ensembl_mart_46", 
+                  dataset="hsapiens_gene_ensembl", 
+                  archive = TRUE)
+```
+
+The problem with this approach is that we have no idea of which releases these tags refer to. The second approach seems more reliable, and allows to precisely specify the release we are interested in. If we look at the [Ensembl archives index](http://www.ensembl.org/info/website/archives/index.html), we can find a list of the available archives. Let's say that I want to use Ensembl release 79, from March 2015. The page tells us the format of the stirng we should pass to useMart:
+
+The Archive Ensembl sites, (e.g. http://nov2008.archive.ensembl.org), have the format: http://<three-letter-month><year>.archive.ensembl.org
+
+Let's try:
+
+```{r use_ensembl_79}
+listMarts(host = "mar2015.archive.ensembl.org")
+```
+
+It seems to work. To select, for example, the human dataset, we must type:
+
+```{r choose_human}
+ensembl <- useMart(host = "mar2015.archive.ensembl.org",
+                   biomart = "ENSEMBL_MART_ENSEMBL",
+                   dataset = "hsapiens_gene_ensembl")
+ensembl
+```
+
+and we have an easily reproducible biomaRt support.

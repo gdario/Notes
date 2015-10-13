@@ -1,0 +1,279 @@
+---
+title: "Limma contrasts in balanced and unbalanced designs"
+author: "Giovanni d'Ario"
+date: "April 8, 2015"
+output: html_document
+---
+
+### Balanced case ###
+Given four groups A, B, C, D, we create the contrast (A + B) - (C + D).  We then consider the contrast AB - CD, where AB and CD are new factors obtained by the aggregation of levels A and B and of levels C and D respectively. We fit a limma model on these two contrasts and compare the results. We want to address the following questions:
+
+1. Are we addressing the same question? Are these contrasts describing the same problem? If not, in what do they differ?
+2. If the four groups contain the same number of observations, are the estimates the same in the first and in the second contrast?
+3. Are the standard errors associated with such estimates the same or do they differ?
+4. If the groups are unbalanced, how do the results change? 
+
+We start creating two factors, both with four levels and both with 40 observations. The first one is completely balanced, with 10 observations in each group, while the second factor is unbalanced, with 3, 7, 10 and 20 observations in A, B, C and D respectively.
+
+```{r factors}
+library(limma)
+balanced <- gl(n = 4, k = 10, labels = LETTERS[1:4])
+unbalanced <- factor(rep(LETTERS[1:4], c(3, 7, 10, 20)))
+balanced_aggregated <- balanced
+unbalanced_aggregated <- unbalanced
+levels(balanced_aggregated) <- levels(unbalanced_aggregated) <- 
+	list(AB = c("A", "B"), CD = c("C", "D"))
+```
+
+We now create the design and contrast matrices for the balanced cases.
+
+```{r design_balanced}
+# 
+design_balanced <- model.matrix(~ 0 + balanced)
+colnames(design_balanced) <- LETTERS[1:4]
+
+design_balanced_aggregated <- model.matrix(~ 0 + balanced_aggregated)
+colnames(design_balanced_aggregated) <- c("AB", "CD")
+
+contrasts_balanced <- makeContrasts((A + B) - (C + D),
+	levels = design_balanced)
+
+contrasts_balanced_aggregated <- makeContrasts(AB - CD, 
+	levels = design_balanced_aggregated)
+```
+
+We create a random matrix with 100 genes and 40 samples. This matrix will be used in all fits.
+
+```{r, create_matrix}
+set.seed(123)
+X <- matrix(rnorm(100 * 40), nrow = 100)
+```
+
+We now fit the models using limma's contrasts.fit function
+
+```{r, fits_balanced}
+fit_balanced <- lmFit(X, design_balanced)
+fit_balanced <- contrasts.fit(fit_balanced, 
+	contrasts = contrasts_balanced)
+fit_balanced_aggregated <- lmFit(X, design_balanced_aggregated)
+fit_balanced_aggregated <- contrasts.fit(fit_balanced_aggregated,
+	contrasts = contrasts_balanced_aggregated)
+```
+
+We compare the coefficients graphically, as shown in the plot below.
+
+```{r, plot_coeffs_balanced}
+plot(x = fit_balanced$coefficients, 
+	y = fit_balanced_aggregated$coefficients,
+	xlab = "Coefficients for (A + B) - (C + D)",
+	ylab = "Coefficients for AB - CD")
+abline(0, 1, lty = 2)
+abline(0, 0.5, lty = 2, col = "red")
+legend(x = "topleft", lty = c(2, 2),
+	col = c(1, 2), legend = c("slope = 1", "slope = 0.5"))
+```
+
+Clearly the coefficients for the aggregated comparison are exactly half of those for the non aggregated case. This makes sense, since what we are fitting in the non-aggregated case, is the difference between the *sum* of the effects A and B, and the *sum* of the effects C and D. In the second comparison, instead, we are estimating the difference between the effect (average) of the pool of the samples in A *and* in B vs. the effect of the pool of the samples in C *and* in D. If we wanted to compare the average of the effects A and B with the average of the effects C and D (by comparing we mean taking the difference), we should actually consider this contrast: 0.5 * (A + B) - 0.5 * (C + D), i.e. the average of the A and B effects minus the average of the C and D effects. Our initial contrast, as a matter of fact, does not make much sense.
+
+As for the degrees of freedom, the non-aggregated case has `r unique(fit_balanced$df.residual)` while the aggregated case has `r unique(fit_balanced_aggregated$df.residual)`. 
+We notice however that the ratio of the standard errors (stdev.unscaled component of the objects above) in the aggregated and in the non aggregated cases is `r unique(fit_balanced_aggregated$stdev.unscaled / fit_balanced$stdev.unscaled)`, therefore the test statistics is going to be the same.
+
+To have a clearer understanding of what is going on, let's compute the estimates of the individual coefficients.
+
+```{r}
+fit_single_groups <- lmFit(X, design_balanced)
+coeff_single <- fit_single_groups$coefficients
+fit_single_aggregated <- lmFit(X, design_balanced_aggregated)
+coeff_single_aggregated <- fit_single_aggregated$coefficients
+```
+
+The coefficients of the (A + B) and (C + D) groups are given respectively by:
+
+```{r}
+a_plus_b <- coeff_single[, 1] + coeff_single[, 2]
+c_plus_d <- coeff_single[, 3] + coeff_single[, 4]
+```
+
+while the coefficients of the AB and CD aggregated groups are given by
+
+```{r single_aggregations}
+ab <- coeff_single_aggregated[, 1]
+cd <- coeff_single_aggregated[, 2]
+```
+
+```{r, fig.width=10}
+op <- par(mfrow=c(1,2))
+plot(y = ab, x = a_plus_b, ylab = "AB", xlab = "(A + B)")
+abline(0, 0.5, col = "red", lty = 2)
+legend(x = "topleft", lty = 2, col = 2, legend = "slope = 0.5")
+plot(y = cd, x = c_plus_d, ylab = "CD", xlab = "(C + D)")
+abline(0, 0.5, col = "red", lty = 2)
+legend(x = "topleft", lty = 2, col = 2, legend = "slope = 0.5")
+par(op)
+```
+
+### Unbalanced case ###
+We now repeat exactly the same steps for the unbalanced case
+
+```{r design_unbalanced}
+design_unbalanced <- model.matrix(~ 0 + unbalanced)
+colnames(design_unbalanced) <- LETTERS[1:4]
+design_unbalanced_aggregated <- model.matrix(~ 0 + unbalanced_aggregated)
+colnames(design_unbalanced_aggregated) <- c("AB", "CD")
+contrasts_unbalanced <- makeContrasts((A + B) - (C + D),
+	levels = design_unbalanced)
+contrasts_unbalanced_aggregated <- makeContrasts(AB - CD, 
+	levels = design_unbalanced_aggregated)
+```
+
+```{r, fits_unbalanced}
+fit_unbalanced <- lmFit(X, design_unbalanced)
+fit_unbalanced <- contrasts.fit(fit_unbalanced, 
+	contrasts = contrasts_unbalanced)
+fit_unbalanced_aggregated <- lmFit(X, design_unbalanced_aggregated)
+fit_unbalanced_aggregated <- contrasts.fit(fit_unbalanced_aggregated,
+	contrasts = contrasts_unbalanced_aggregated)
+```
+
+```{r, plot_coeffs_unbalanced}
+plot(x = fit_unbalanced$coefficients, 
+	y = fit_unbalanced_aggregated$coefficients,
+	xlab = "Coefficients for (A + B) - (C + D)",
+	ylab = "Coefficients for AB - CD")
+abline(0, 0.5, lty = 2, col = "red")
+```
+
+As before, the non-aggregated case has `r unique(fit_unbalanced$df.residual)` degrees of freedom while the aggregated case has `r unique(fit_unbalanced_aggregated$df.residual)`.
+
+### Can we 'rebalance' an unbalanced case?
+
+In the unbalanced case, we should be able to reproduce the aggregated results reweighting each group by the proportion of its samples contributing to the grand mean. For example, in our case the unbalanced datasets are composed by:
+
+```{r table_unbalanced}
+table(unbalanced)
+table(unbalanced_aggregated)
+```
+
+We can create a new contrast where we weight the classes such to mimick as closely as possible the aggregated case
+
+```{r a_posteriori_aggregation}
+aposteriori_aggregation <- makeContrasts(
+  (.3 * A + .7 * B) - (1/3) * (C + 2 * D),
+  levels = design_unbalanced)
+fit_aposteriori <- lmFit(X, design_unbalanced)
+fit_aposteriori <- contrasts.fit(fit_aposteriori, 
+  contrasts = aposteriori_aggregation)
+```
+
+Have we successfully reconstructed the aggregated case? Looking at the figure below this seems to be the case.
+
+```{r}
+plot(x = fit_aposteriori$coeff, 
+  y = fit_unbalanced_aggregated$coeff,
+  xlab = "Coefficients for the a-posteriori aggregation",
+  ylab = "Coefficients for AB - CD")
+abline(0, 1, lty = 2)
+```
+
+Does this identity hold also when we apply the empirical Bayes adjustment. Besides the different number of degrees of freedom, it should, at least to a fair extent.
+
+```{r}
+fit_eb_aposteriori <- eBayes(fit_aposteriori)
+fit_eb_unbalanced_aggregated <- eBayes(fit_unbalanced_aggregated)
+tt_aposteriori <- topTable(fit_eb_aposteriori, n = Inf)
+tt_unbalanced_aggregated <- topTable(fit_eb_unbalanced_aggregated,
+  n = Inf)
+all.equal(rownames(tt_aposteriori), rownames(tt_unbalanced_aggregated))
+```
+
+The order of the genes is the same. Let's take a look at the t statistic
+
+```{r}
+plot(x = tt_aposteriori$t, y = tt_unbalanced_aggregated$t,
+  xlab = "t statistic for the a-posteriori aggregation",
+  ylab = "t statistic for the AB - CD comparison")
+abline(0, 1, lty = 2)
+```
+
+The two t statistics are identical.
+
+### Is limma always using all the samples? ###
+
+We now address a different question. Let's consider for simplicity the balanced case, and let's assume that we want to compare only the A and B groups. Does limma automatically exclude the samples in the C and D groups or does it include them for the computation of the empirical-bayes variances? In order to make this point clearer, we should somehow make the variances in the groups A and B different from those in groups C and D. We create a new matrix Y with these properties. We then create an YAB matrix containing only the samplees in A and B. First we fit a model based on the whole dataset, considering only the A - B contrast.
+
+```{r Ymatrix}
+Y <- X
+Y[, 21:40] <- matrix(rnorm(2000, sd = 3), nrow = 100)
+fit_y <- lmFit(Y, design_balanced)
+contrasts_y <- makeContrasts(A - B, levels = design_balanced)
+fit_y <- contrasts.fit(fit_y, contrasts = contrasts_y)
+```
+
+Then we fit a model where we restrict the dataset to the samples that belong either to A or to B.
+
+```{r}
+YAB <- Y[, 1:20]
+design_yab <- model.matrix(~ 0 + factor(rep(c("A", "B"), 
+  each = 10)))
+colnames(design_yab) <- c("A", "B")
+contrasts_yab <- makeContrasts(A - B, levels = design_yab)
+fit_yab <- lmFit(YAB, design = design_yab)
+fit_yab <- contrasts.fit(fit_yab, contrasts = contrasts_yab)
+```
+
+So far we have not used the empirical Bayes estimator, and we expect the coefficients to be the same.
+
+```{r plot_coeffs, fig.width=10}
+op <- par(mfrow = c(1, 2))
+plot(x = fit_yab$coeff, y = fit_y$coeff,
+  xlab = "coeff A and B only", ylab = "coeff all samples")
+abline(0, 1, lty = 2)
+plot(x = fit_yab$sigma, y = fit_y$sigma,
+  xlab = " residual standard deviation A and B only",
+  ylab = " residual standard deviation all samples")
+abline(0, 1, lty = 2, col = "red")
+par(op)
+```
+
+As expected the coefficients are identical, but the residual standard deviations are completely different. However, the unscaled standard deviation associated with the coefficients are the same in the two fits.
+
+```{r same_stdev}
+unique(fit_yab$stdev.unscaled) == unique(fit_y$stdev.unscaled)
+```
+
+interestingly, also the estimates of the coefficients are the same.
+
+CONTINUE HERE
+
+We now apply the empirical Bayes estimates.
+
+```{r}
+fit_eb_y <- eBayes(fit_y)
+fit_eb_yab <- eBayes(fit_yab)
+tt_y <- topTable(fit_eb_y, n = Inf)
+tt_yab <- topTable(fit_eb_yab, n = Inf)
+all.equal(fit_eb_yab$coeff, fit_eb_y$coeff)
+all.equal(rownames(tt_y), rownames(tt_yab))
+```
+
+After the empirical Bayes computation the coefficients remain identical, but the ordering in the top tables is different. We matche the rownames in the two tables, and plot the t statistics.
+
+```{r plot_top_tables, fig.width=10}
+op <- par(mfrow = c(1, 2))
+idx <- match(rownames(tt_y), rownames(tt_yab))
+tt_yab <- tt_yab[idx, ]
+plot(tt_yab$t, tt_y$t, 
+  xlab = "t statistic A and B only",
+  ylab = "t statistic all samples")
+abline(0, 1, lty = 2)
+abline(0, 0.5, lty = 2, col = "red")
+legend(x = "topleft", col = c(1, 2), lty = c(2, 2),
+  legend = c("Slope = 1", "Slope = 0.5"))
+plot(-log10(tt_yab$P.Value), -log10(tt_y$P.Value),
+  xlab = "-log10(pvalue) A and B only", 
+  ylab = "-log10(pvalue) all samples")
+abline(0, 1, lty = 2)
+par(op)
+```
+
+The results are indeed surprising. The t-statistic is apparently twice as large when we consider only A and B compared with the case where all the samples are retained in the matrix. There is also some fluctuation around the straight line, probably due to the empirical Bayes adjustment.

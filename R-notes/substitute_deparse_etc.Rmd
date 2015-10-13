@@ -1,0 +1,171 @@
+---
+title: "Substitute, deparse, quote & Co"
+author: "Giovanni d'Ario"
+date: "10 May 2015"
+output: html_document
+---
+
+# Substitute
+
+The idea behind substitute take an expression containing some varibles, and an environment. The variables in the expression will be replace (substituted) by those with the same name, contained in the environment. The expression, however, will not be evaluated, and will be returned as a *call*. We can use environments, lists or data frames as the second argument to the `substitute` function.
+
+```{r}
+e <- new.env()
+e$a <- 5
+s <- substitute(2 * a + 5 * b, env = e)
+s
+class(s)
+```
+
+As we can see from the example above, substitute replaces the value 5, but does not perform the multiplication.
+
+If a value is not a bound symbol, than it is included in the output unchanged.
+
+```{r}
+substitute(w + z, env = e)
+```
+
+If it a promise object (a formal argument to a function), then we are in the function's environment.
+
+The substitution is purely lexical, and does not check whether the resulting expression makes sense or not.
+
+```{r}
+substitute(x <- x + 1, env = list(x = 1))
+```
+
+To understand how `susbtitute` works in function arguments, we must furst understand how *promises* work.
+
+## Promises
+
+Promises are the mechanism behind R's *lazy evaluation*. The function `delayedAssign` creates a *promise* to evaluate the given expression if its value is requested. In other words, the expression assigned to a promise by `delayedAssign` will not be evaluated until it is *forced*, either by accessing the variable, or by explicitely calling the `force` function.
+When the promise is eventually forced, it is evaluated within the environment specified by eval.env (whose contents may have changed in the meantime). After that, the value is fixed and the expression will not be evaluated again.
+
+```{r}
+a <- 10
+f1 <- function(x, y = x) {
+  x <- x + 1
+  y
+}
+f1(a)
+```
+
+```{r}
+s1 <- function(x, y = substitute(x)) {
+  x <- x + 1
+  y
+}
+s1(a)
+```
+
+In this case y is assigned the unevaluated expression `x`, but this expression will not be used until `y` is explicitely called, which happens at the very end of the function. At this poing, y contains the "updated" value of x.
+
+```{r}
+s2 <- function(x, y) {
+  if(missing(y))
+    y <- substitute(x)
+  x <- x + 1
+  y
+}
+s2(a)
+```
+
+In this function, instead, y is immediately forced to contain the value of `x`, which is `a`, since `x` has not been evaluated yet. Once `x` is referred to, the value bound to `a` will be used, but this does not affect `y`.
+
+## Subset and scoping rules
+
+Following the chapter **Computing on the language** of Hadley's book, we inspect four cases of broken `subset`s.
+
+```{r}
+sample_df <- data.frame(a = 1:5, b = 5:1, c = c(5, 3, 1, 4, 1))
+subset2 <- function(x, condition) {
+  condition_call <- substitute(condition)
+  r <- eval(condition_call, x)
+  x[r, ]
+}
+```
+
+We have created a simple data frame and a (partial) version of a subset function. We then create a number of variables with the same name of objects internally used by `subset2`.
+
+```{r}
+y <- 4
+x <- 4
+condition <- 4
+condition_call <- 4
+# case 1
+subset2(sample_df, a == 4)
+# case 2
+subset2(sample_df, a == y)
+# case 3
+subset2(sample_df, a == x)
+# case 4
+subset2(sample_df, a == condition)
+# case 5
+subset2(sample_df, a == condition_call)
+```
+
+Case 1 and 2 work as expected since, in the first case, we are using a numeric literal, and in the second the variable `y` exists only in the global environment.
+Case 3 fails because `x`, within the function body, is the whole data frame. This condition is therefore equivalent to the following expression:
+
+```{r}
+sample_df$a == sample_df
+```
+
+**I DON'T UNDERSTAND Case 4 and 5**
+
+Modifying the `subset2` function as follows:
+
+```{r}
+subset2 <- function(x, condition) {
+  condition_call <- substitute(condition)
+  r <- eval(condition_call, x, parent.frame())
+  x[r, ]
+}
+```
+
+is equivalent to transforming the data frame `x` into an environment within the body of the function. In fact, `x` provide the *frame* (the binding between values and names) while `enclos` provides the enclosing environment. The combination of a frame and an enclosing environment is an environment. An alternative to using `enclos` is to directly transform the data frame (or the list) into an environment using `list2env`.
+
+```{r}
+subset3 <- function(x, condition) {
+  condition_call <- substitute(condition)
+  e <- list2env(x, parent = parent.frame())
+  r <- eval(condition_call, envir = e)
+  x[r, ]
+}
+```
+
+## Calling subset from another function
+
+Let's define the `scramble` function and combine it with our `subset2` function (now fixed such that it will look in the `parent.frame`.
+
+```{r}
+# subset2
+subset2 <- function(x, condition) {
+  condition_call <- substitute(condition)
+  r <- eval(condition_call, x, parent.frame())
+  x[r, ]
+}
+# scramble
+scramble <- function(x) x[sample(nrow(x)), ]
+# subscramble
+subscramble <- function(x, condition) {
+  scramble(subset2(x, condition))
+}
+```
+
+This function does not work presumably because `condition` is evaluated when it is passed from `scramble` to `subset2`, i.e, before `substitute` can do its job. If we move the substitute step from `subset2` to `subscramble`, things work.
+
+```{r}
+subset3 <- function(x, condition) {
+  r <- eval(condition, x, parent.frame())
+  x[r, ]
+}
+# subscramble
+subscramble2 <- function(x, condition) {
+  condition_call <- substitute(condition)
+  scramble(subset3(x, condition_call))
+}
+# We don't neet to modify scramble
+subscramble2(sample_df, a >= 4)
+```
+
+This, however, is a problem, since in most cases we cannot move the `substitute` command in an out nested functions, unless we write ad-hoc versions of them. In `subscramble2` we have "pre-quoted" the expression `condition`.
