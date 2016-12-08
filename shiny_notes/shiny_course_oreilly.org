@@ -1,0 +1,51 @@
+* Introduction to Shiny
+
+** Part 1
+TO BE ADDED
+
+** Part 2
+
+*** Dislaply Output with =render*()= Functions 
+render*() make an object to display in the UI.
+Concept of object invalidation. Important to know:
+1. What is being invalidated.
+2. How an object reacts to invalidation.
+
+*** reactive()
+- Takes a depencdency on /every/ reactive value in the code chunk (they can be more than one)
+- Must be called like a function (i.e. reactive_fun())
+- Reactive expressions cache their values for efficiency. If the object is invalidated, the value is recalculated.
+
+Keep in mind that the objects that are invalidated come from the UI. The server runs computations based on these objects, and returns outputs to the UI.
+
+=render()= to create objects to be visualized in the UI>
+=reactive()= to create objects that can be used downstream.
+
+*** isolate()
+Extreme version of delayed reactions. It removes a dependency from a reactive value. You can isolate single values or whole chunks of code.
+
+*** eventReactive()
+Correct way to delay a reaction. Typical example: inclusion of an =actionButton= that controls when an expression is invalidated.
+
+#+BEGIN_SRC R
+data <- eventReactive(input$go, {rnorm(input$num)})
+#+END_SRC
+
+Here =input$go= is the reactive event ignited by the button. You can use multiple reactive values using the =c(rv1, rv2)= syntax.
+
+Note that this is different from the following code:
+
+#+BEGIN_SRC R
+data <- reactive(c(input$go, rnorm(input$num)))
+#+END_SRC
+
+In the latter case /both/ the button and the slider will invalidate the =data= object.
+
+*** observeEvent()
+This is the case where we have two buttons, one for normal distributions and one for uniform distributions. =observeEvent()= triggers code to run.
+
+#+BEGIN_SRC R
+observeEvent(input$rnorm, {rv$data <- rnorm(input$num)})
+#+END_SRC
+
+In this case the data are created inside the expression, and are assigned to the reactive value =rv=. 
