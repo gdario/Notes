@@ -1,0 +1,657 @@
+Notes from the O'Reilly Course "Introduction to Shiny"
+================
+Giovanni d'Ario
+
+-   [Link to the course website](#link-to-the-course-website)
+-   [Input and output objects](#input-and-output-objects)
+    -   [Inputs](#inputs)
+    -   [Outputs](#outputs)
+    -   [Recommended approach](#recommended-approach)
+-   [Introduction to reactivity](#introduction-to-reactivity)
+-   [The `reactive()` function](#the-reactive-function)
+-   [`isolate()`](#isolate)
+-   [Delayed reactions with `eventReactive()`](#delayed-reactions-with-eventreactive)
+-   [`observeEvent()`](#observeevent)
+    -   [`reactiveValues()`](#reactivevalues)
+    -   [`observeEvent()`](#observeevent-1)
+-   [`observe()`](#observe)
+-   [Conditional vs. unconditional triggering: calculations vs. side-effects](#conditional-vs.-unconditional-triggering-calculations-vs.-side-effects)
+-   [Scheduling operations `invalidateLater()`](#scheduling-operations-invalidatelater)
+-   [Making a chronograph](#making-a-chronograph)
+-   [`reactiveFileReader()` and `reactivePoll()`](#reactivefilereader-and-reactivepoll)
+    -   [`reactiveFileReader()`](#reactivefilereader)
+    -   [`reactivePoll()`](#reactivepoll)
+-   [Interactive Visualizations](#interactive-visualizations)
+    -   [`nearPoints()`](#nearpoints)
+    -   [`brushedPoints()`](#brushedpoints)
+-   [General Strategies](#general-strategies)
+-   [Developing the UI](#developing-the-ui)
+    -   [`htmlTemplates`](#htmltemplates)
+-   [R functions returning HTML](#r-functions-returning-html)
+-   [`fluidRow()`](#fluidrow)
+-   [Panels](#panels)
+    -   [`wellPanel()`](#wellpanel)
+
+Link to the course website
+--------------------------
+
+[Website of the course](https://www.safaribooksonline.com/library/view/introduction-to-shiny)
+
+Input and output objects
+------------------------
+
+### Inputs
+
+Let's start with the simplest example, i.e., (almost) what you get from the Shiny template. We want to create a slider in a fluid page and plot a histogram where the number of points changes when you move the slider. Our only input is the slider. More in general, our inputs will be the return values of the widgets in the UI. In our case, the slider will return a value and this value will be associated with a component in the `input` list. As a general rule, two things should go into an input object: a name (the `inputId`) and a label. These are then followed by the "real" arguments. In our case, the `ui.R` file consists only of the following lines:
+
+``` r
+library(shiny)
+
+fluidPage(
+  sliderInput(inputId = "num", label = "Enter a value", 
+              min = 1, max = 100, value = 50)
+)
+```
+
+The `inputId` is the name that will be used in the server when we need to make use of the input produced by the user by moving the slider. This becomes clearer when we look at the `server.R` script.
+
+``` r
+library(shiny)
+
+server <- function(input, output) {
+    output$hist <- renderPlot({
+    hist(rnorm(input$num)) # the value returned by the slider
+  })
+}
+```
+
+### Outputs
+
+In the above case the `renderPlot()` function "renders" the histogram into an HTML object. This is assigned to the `output` list as a component named `hist`. In general (although it may be a bit of an oversimplification):
+
+-   Inputs are the values returned by the UI.
+-   Outputs are the objects returned by the server.
+
+These are the things that appear in the UI, like plots, text, etc. An important distinction that can create confusion at the beginning is the following: `fluidPage()` is a function, and all the widgets we put in the page are actually arguments to the function, therefore you must separate the various components with a comma.
+
+``` r
+ui <- fluidPage(
+   sliderInput("num", "Choose a number", 1, 100, 50),
+   plotOutput("hist")
+)
+```
+
+Conversely `server()` is a function that takes as arguments `input`, `output` and, optionally, `session`. The output-producing functions, like `render*()`, are independently called in the body of server, and should not be separated by commas.
+
+The `plotOutput` function only creates the space in the UI for a plot. It does not actually plot anything. The plotting is performed by the `renderPlot()` function in the server. Such output is assigned to the `output` list, and the name of the list component must match the name appearing in `plotOutput`.
+
+``` r
+# In server.R
+output$hist <- renderPlot(rnorm(input$num))
+
+# In ui.R
+plotOutput("hist")
+```
+
+The creation of a plot is a three step process:
+
+1.  We allocate space in the UI, for example with `plotOutput`.
+2.  We add an object to the `output` list whose name matches that of `plotOutput`.
+3.  We use a `render*()` function whose name matches the `*Output()` function name. This will contain the code that actually produces the output.
+
+The `sliderInput()` function in the UI captures an input from the user that is returned to the server as a component of the `input` list. Therefore the `"num"` name associated with the input slider is also the name of the corresponding input in the server.
+
+### Recommended approach
+
+1.  Start with a template.
+2.  Add elements to the fluid page. This can be text, titles, images, widgets etc.
+3.  Some of the above will be reactive objects. For example, textual description will not be reactive, but whatever is returned from a widget will normally be.
+4.  Allocate space to display the results in the UI via the `*Output()` functions.
+5.  Use the `server` function to assemble inputs into outputs and produce the results that will be displayed by the `*Output()` function.
+
+This last step can further be divided into three steps:
+
+1.  Save the output into the `output` list, like `output$hist <-`.
+2.  Build a render function with `render*()`. This must match the input widget in the UI.
+3.  Access the input values with `input`, like in `input$num`.
+
+Introduction to reactivity
+--------------------------
+
+Reactivity is presumably the most important concept in Shiny. Widgets return reactive values, and functions operating on reactive values or objects are themselves reactive. Functions operating on reactive objects are *reactive functions*. You cannot use a reactive value outside of a reactive function. For example, you cannot use `hist(rnorm(input$num))` outside of `renderPlot`. This will produce an error message. When you create a reactive object like, for example,
+
+``` r
+output$hist <- renderPlot({
+  hist(rnorm(input$num))
+})
+```
+
+you are just creating an object (the component "hist" of the `output` list) that executes a reactive function (`renderPlot()` in this case). If the user changes the position of the slider, the `input` is said to be *invalidated*. The term invalidated is synonym for out of date. This will force the reactive function to be executed again.
+
+When creating an app, the two main points that one should address are:
+
+1.  What objects does my reactive object/function depend on?
+2.  How does my reactive object respond when one of his dependencies is invalidated?
+
+The second point is particularly important. We may not want our object to *immediately* change when the reactive object changes. This will become clear in the next sections.
+
+Note that if *any* of the reactive dependencies of a reactive object/function changes, the object will be re-generated. This because any of such dependencies will make the reactive object/function out of sync.
+
+The `reactive()` function
+-------------------------
+
+The `reactive()` function generates a reactive object that can be used later in the app. Note the difference between the two versions of `data` below. Why do we need such a function? Let's consider this simple example. The `ui.R` looks like the following:
+
+``` r
+library(shiny)
+fluidPage(
+  sliderInput(inputId = "num", label = "Choose a number",
+              min = 1, max = 100, value = 50),
+  plotOutput("hist"),
+  verbatimTextOutput("sum")
+)
+```
+
+While the `server.R` file contains the following:
+
+``` r
+library(shiny)
+server <- function(input, output) {
+  output$hist <- renderPlot(hist(rnorm(input$num)))
+  output$sum <- renderPrint(summary(rnorm(input$num)))
+}
+```
+
+The problem with this app is that the histogram is drawn based on a data set and the summary is computed based on a different data set. We want the two data sets to be the same. The solution is to re-write the `server.R` as follow:
+
+``` r
+library(shiny)
+server <- function(input, output) {
+  data <- reactive(rnorm(input$num)) # Reactive dataset
+  output$hist <- renderPlot(data()) # Note the ()
+  output$sum <- renderPrint(summary(data())) # Again, note the ()
+}
+```
+
+**Important:** Technically this new version of `data` is a function, not a vector, so you must call it as `data()`. If `input$num` changes, `data` will *signal* the change, but it will not change automatically, because a reactive object can only be used by a reactive function. Therefore the change will be visible only when`data` is used in a reactive function. This *lazyness* is an important characteristic, since it means that the object is re-created only when needed. This is in contrast with the *eager* behavior of other functions we will meet shortly.
+
+`isolate()`
+-----------
+
+The `isolate()` function takes a reactive expression or a reactive object and makes it non-reactive. This means that if you write:
+
+``` r
+renderPlot({hist(rnorm(isolate(input$num)))})
+```
+
+the expression inside `isolate` has no notion of object invalidation anymore. One important consequence is that now you can use the *isolated* object as the argument for a non-reactive function. Remember that reactive objects can only be used inside reactive functions. Likewise, isolated objects can be used in non-reactive functions.
+
+Delayed reactions with `eventReactive()`
+----------------------------------------
+
+Suppose we want to add an `actionButton` that, when pressed, will invalidate the data sets. Here the key point is that we want to invalidate the data set *only* when we press the button, not when we move the slider. Every time you press an `actionButton`, an integer value is increased by one and returned. You are not supposed to use this value directly. It is just a way to signal that its status has changed. We can now make the `data` reactive object dependent only on the event generated by the `actionButton` by using `eventReactive()`:
+
+``` r
+# Go is the inputId of the actionButton
+data <- eventReactive(input$go, {rnorm(input$num)})
+```
+
+`eventReactive()` takes two arguments: a vector of reactive values that will trigger the invalidation of `data` and, in braces, the expression that produces `data`. In our case the first argument contains only one element, but if we want the code in braces to depend on more than one event, we can specify a vector of events.
+
+``` r
+data <- eventReactive(
+  c(input$event1, input$event2, input$event2), {
+    rnorm(input$num)
+  })
+```
+
+Note that the braces are only around the expression that involves `input$num`. The resulting `data` object will be invalidated only when `input$go` changes, but not when `input$num` changes.
+
+`observeEvent()`
+----------------
+
+Assume we have now not one but two `actionButtons`: one to generate a vector of normal deviates, and one to generate a vector of uniform deviates. As before, we want to re-create the data set based on the button we press, and regardless whether or not we move the slider. Here, however, the data set is generated by two different functions depending on which button we press. We therefore need two mechanisms to generate the data sets, each triggered by its relative `actionButton`.
+
+``` r
+# In ui.R
+actionButton(inputId = "norm", label = "Normal Data"),
+actoinButton(inputId = "unif", label = "Uniform Data")
+```
+
+In the code below there are two new things:
+
+``` r
+rv <- reactiveValues(data = rnorm(50)) # default
+observeEvent(input$norm, {rv$data <- rnorm(input$num)})
+observeEvent(input$unif, {rv$data <- runif(input$num)})
+```
+
+### `reactiveValues()`
+
+Notice that in the code above we have created an object called `rv` by calling the function `reactiveValues()`. Why do we need another mechanism to create reactive values when we already have the `input` list containing whatever the widgets return? The reason is that the widgets are under exclusive control of the UI user, not of the programmer. The `reactiveValues()` function creates a list of reactive values that is entirely under the control of the programmer. We could have just as well created an empty reactive list. In the case above we assign a default random vector of 50 elements. As for now `rv` is a placeholder that will contain the output of the next new function: `observeEvent()`.
+
+### `observeEvent()`
+
+What `observeEvent` does is to trigger code execution on the server side conditional on a specific event being observed. It will create a reactive object, an *observer*, that is not callable. Note, in fact, that `observeEvent()` does not return a value and that there is no `data <- observeEvent(...)`. As for `eventReactive` you can trigger the execution on multiple events by providing a vector of reactive values. If any of the reactive values changes, the code in the expression will be executed.
+
+Putting all the pieces together what happens is the following:
+
+1.  We create a placeholder list called `rv` with `reactiveValues()`. We initially create a `data` component in this list, containing 50 random normal deviates.
+2.  We observe whether `input$norm` or `input$unif` occur, and based on which one does, we update the `rv$data` object using the information contained in `input$num`.
+
+`observe()`
+-----------
+
+The `observe()` function is similar to `observeEvent()` but unlike it, the expression in parenthesis is not conditioned on any event, and can be invalidated by whatever dependency it contains. For example, consider the difference between:
+
+``` r
+observeEvent(input$unif, {rv$data <- runif(input$num)})
+observe({rv$data <- rnorm(input$num)})
+```
+
+In the first case, `rv$data` is re-created whenever `input$unif` changes, but not when `input$num` does. In the second case the only "invalidating factor" is`input$num`. As was the case for `observeEvent()`, the purpose of `observe()` is to trigger code, not to return a value.
+
+Conditional vs. unconditional triggering: calculations vs. side-effects
+-----------------------------------------------------------------------
+
+We have identified very similar functions, that perform almost identical operations that differ on whether we condition on a specific vector of triggers or not. In other words, the dependencies can be explicit or implicit. Another distinction we have observed is between *reactive functions* and *observers*. We can cross-tabulate these characteristics as shown below:
+
+| Dependencies | Reactive Expression | Observer         |
+|--------------|---------------------|------------------|
+| Implicit     | `reactive()`        | `observe()`      |
+| Explicit     | `eventReactive()`   | `observeEvent()` |
+
+As for the difference between reactive functions and observer, we can summarize them in the table below:
+
+| Reactive Expression | Observer        |
+|---------------------|-----------------|
+| Callable            | Not callable    |
+| Returns a value     | No return value |
+| Lazy (passive)      | Eager (active)  |
+| Cached              | N/A             |
+
+Why do such distinctions exist? A function can, broadly speaking, do one or both of the following things:
+
+1.  Return a value.
+2.  Produce a side effect, e.g., make a plot or modify its environment.
+
+When using the *conditional* or the *unconditional* functions is essentially a matter of whether we are dealing with return values or side-effects. Reactive expressions are good for *calculations*, in that they calculate something, return a value, cache the results and are lazy. Observers are good for *side effects*, in that they are not callable, do not return anything, and do not wait for anything to do their job. As a general rule, it's best to keep the number of side-effects to a minimum, as side-effects are hard to debug. Looking at the examples above, modifying the data set is a side effect. In general, avoid putting calculations in observers: they will always be immediately executed, and this will slow down the app due to their *eagerness*.
+
+Scheduling operations `invalidateLater()`
+-----------------------------------------
+
+Example: I have an app that reads a data set from disk and produces a plot. Then, I modify the original data set on disk, say by adding another observation. How can I make Shiny see the change? In the example we are writing code like:
+
+``` r
+data <- reactive({read.csv('mydata.csv')})
+```
+
+This code cannot work, since `read.csv` does not return a reactive value. We can add the reactivity by adding an `actionButton` that updates the status of the app.
+
+``` r
+actionButton(inputId = "update", label = "Update") # in ui.R
+eventReactive(input$update, {read.csv('mydata.csv')}) # in server.R
+```
+
+In this case the user must press the `actionButton` to invalidate `data`. The alternative is having an automatic invalidation mechanism that will check at fixed time intervals whether the data has changed on disk. This operation is performed by `invalidateLater()`. To make it work we write:
+
+``` r
+data <- reactive({
+  invalidateLater(1000) # in milliseconds
+  read.csv("mydata.csv")
+})
+```
+
+Note that `invalidateLater` must appear inside the `reactive()` function. **Important**: `invalidateLater()` *does* invalidate the object. This means that every 1000 ms, `read.csv` will re-read the data set, even if nothing has changed.
+
+Making a chronograph
+--------------------
+
+For the server side.
+
+``` r
+server <- function(input, output) {
+  systime <- reactive({
+    invalidateLater(1000) # Note, no commas
+    Sys.time()
+  })
+  output$sys_time <- renderPrint(systime()) # Don't forget the ()
+}
+```
+
+For the UI side.
+
+``` r
+# ui.R
+fluidPage(
+  verbatimTextOutput("sys_time")
+)
+```
+
+`reactiveFileReader()` and `reactivePoll()`
+-------------------------------------------
+
+### `reactiveFileReader()`
+
+The main limitation of the approach based on `invalidateLater()` is that, if a file is large, this operation will be expensive and wasteful. A much better approach is using `reactiveFileReader()`. This function creates a reactive data set that stays current with the file on disk. The file will be reloaded only if it changes on disk. To work, it requires that `server` has an additional argument: `session`. The function has the following arguments:
+
+1.  the interval in milliseconds.
+2.  the name of the session.
+3.  the path to the file of interest.
+4.  the function used to read the file.
+
+``` r
+server <- function(input, output, session) {
+  data <- reactiveFileReader(
+    intervalMillis = 5000, # Check the file every 5 sec.
+    session = session,
+    filePath = 'mydata.csv',
+    readFunc = read.csv
+  )
+}
+```
+
+The `session` argument is optional in general, but mandatory when using `reactiveFileReader()`. The `data` object is a reactive data set, as the ones we have seen previously.
+
+### `reactivePoll()`
+
+If our data are in a database rather than in a file, we can use `reactivePoll()`. The syntax is similar to `reactiveFileReader()`:
+
+``` r
+server <- function(input, output, session) {
+  data <- reactivePoll(
+    intervalMillis = 5000, # Check the file every 5 sec.
+    session = session,
+    checkFunc = readTimeStamp,
+    valueFunc = getData
+  )
+}
+```
+
+The `checkFunc` function should connect to the database and check if anything has changed. It's probably something we have to write ourselves. Since it's going to be run over and over again, it should be small and lean. The `getData()` function must be able to pull down the data when a change is spotted.
+
+Interactive Visualizations
+--------------------------
+
+We are going to add interactive brushing to the diamond data set in `ggplot2`. We start with an app that has not interactivity at all. Our app looks like the one below:
+
+``` r
+library(shiny)
+library(ggplot2)
+diamonds2 <- diamonds[sample(1:nrow(diamonds), 5000), ]
+
+ui <- fluidPage(
+  plotOutput("plot1"),
+  plotOutput("plot2")
+)
+
+server <- function(input, output) {
+  output$plot1 <- renderPlot({
+    ggplot(diamonds2, aes(x = cut, y = color)) +
+      geom_count() +
+      theme_bw()
+  })
+  output$plot2 <- renderPlot({
+    ggplot(diamonds2, aes(carat, price)) +
+      geom_point() +
+      theme_bw()
+  })
+}
+```
+
+As a side, note that the `diamonds2` data set is created outside the UI and the server, as it's supposed to be defined only once. If you use two files for the app, the definition of `diamonds2` should go in `server.R`, not in `ui.R`. The app generates a *count plot* using `geom_count()`, and a scatter plot using `geom_point()`. The `plotOutput()` function can receive extra-arguments telling how it should behave in case of mouse click, double-click etc. For example:
+
+``` r
+plotOutput(..., click = "myclick")
+```
+
+will store click events in the variable `myclick`. These can be later accessed with `input$myclick`. Therefore a first level of interactivity can be achieved by re-writing our app as shown below. Note that, for illustration purposes, we are replacing the second plot with some information returned by the click event.
+
+``` r
+library(shiny)
+library(ggplot2)
+diamonds2 <- diamonds[sample(1:nrow(diamonds), 5000), ]
+
+ui <- fluidPage(
+  plotOutput("plot1", click = "myclick"),
+  verbatimTextOutput("location")
+)
+
+server <- function(input, output) {
+  output$plot1 <- renderPlot({
+    ggplot(diamonds2, aes(x = cut, y = color)) +
+      geom_count() +
+      theme_bw()
+  })
+  output$location <- renderPrint({
+    cat("x=", input$click$x, "\ny=", input$click$y)
+  })
+}
+```
+
+Note that `input$click` is a list with two components: `input$click$x` and `input$click$y`. More in general, you can make use of the following events:
+
+| Name       | Function                                           |
+|------------|----------------------------------------------------|
+| `click`    | coordinates of click                               |
+| `dblclick` | coordinates of double click                        |
+| `hover`    | coordinates of hover (location of stationary moue) |
+| `brush`    | coordinates of brush (i.e. of the bounding box)    |
+
+### `nearPoints()`
+
+In general you are not expected to work with the raw coordinates, but rather with Shiny's utility functions that allow identifying the closest points to the coordinates of interest. An example of such functionality is `nearPoints()`.
+
+``` r
+nearPoints(
+  diamonds,       # name of the dataset
+  input$click,    # name of the input component
+  xvar = "cut",   # name of the x coordinate in the data set
+  yvar = "color", # name of the y coordinate in the data set
+  maxpoints = 1   # number of points to return
+)
+```
+
+For `ggplot2` plots, the `xvar` and the `yvar` arguments are not necessary, but they are if you are working with base graphics. Note that these functions do not support the `lattice` system. `nearPoints()` returns a data frame containing the selected points.
+
+Note the *feedback loop* existing between `plotOutput()` and whatever `render*()` function makes use of `nearPoints()`: we first plot the whole data set with `renderPlot()`, that sends its output to the UI, which visualizes it with `plotOutput()`. The latter, however, has a `click` argument that is an input from the user and that is passed to the server as `input$click`. This information is used, in our case to print the `x` and `y` coordinates of the point, and returned to the UI for visualization.
+
+### `brushedPoints()`
+
+The `brushedPoints()` is similar to `nearPoints()` and shows all the points within the brush region. In the example below, the `xvar` variable comes from a reactive variable.
+
+``` r
+brushedPoints(
+  mtcars,            # dataset
+  input$brush,       # input object
+  xvar = input$xvar, # x coordinate (optional for ggplot2)
+  yvar = "mpg"       # y coordinate (optional for ggplot2)
+)
+```
+
+What these functions will show in a `verbatimTextOutput()` (if the output is rendered with `renderPrint()`) is the subset of the data set associated with the coordinates we selected.
+
+Now, what if we want to highlight the brushed points in green in the plot. We can feed `brushedPoints()` directly to `ggplot2` as shown below:
+
+``` r
+library(shiny)
+library(ggplot2)
+diamonds2 <- diamonds[sample(1:nrow(diamonds), 5000), ]
+
+ui <- fluidPage(
+  plotOutput("plot1", brush = "brush"),
+)
+
+server <- function(input, output) {
+  output$plot1 <- renderPlot({
+    ggplot(diamonds2, aes(x = cut, y = color)) +
+      geom_count() +
+      theme_bw() +
+      geom_count(
+        data = brushedPoints(diamonds2, input$brush),
+        color = "green"
+      )
+  })
+}
+```
+
+The brushed points are now green. What if we want to highlight the brushed points in both plots? We can assign the data frame identified by `brushedPoints()` to a variable, keeping in mind that this *must* be reactive. The example below shows the UI and the server code for an app that facets the price-carat plots by cut, and allows the highlighting. The `ui.R` is very simple:
+
+``` r
+library(shiny)
+library(ggplot2)
+
+fluidPage(
+  plotOutput("plot1", brush = "brush"),
+  plotOutput("plot2")
+)
+```
+
+The `server.R` is also pretty simple:
+
+``` r
+library(shiny)
+library(ggplot2)
+
+diamonds2 <- diamonds[sample(1:nrow(diamonds), 5000), ]
+
+server <- function(input, output) {
+  
+  # This object *must* be reactive
+  brushed_data <- reactive(
+    brushedPoints(diamonds2, brush = input$brush)
+  )
+  
+  # Don't forget the () here...
+  output$plot1 <- renderPlot({
+    ggplot(diamonds2, aes(x = cut, y = color)) +
+      geom_count() +
+      theme_bw() +
+      geom_count(data = brushed_data(), color = "green")
+  })
+  
+  # ...and here
+  output$plot2 <- renderPlot({
+    ggplot(diamonds2, aes(x = carat, y = price)) +
+      geom_point() +
+      theme_bw() +
+      facet_wrap(~ cut) +
+      geom_point(data = brushed_data(), color = "green")
+  })
+}
+```
+
+General Strategies
+------------------
+
+If you need to load a library, or to connect to a database, do it in the UI, not in the server. Same if you need to source external scripts. Everything that appears outside of the server will be run once per session (R worker). The code inside the `server` function will be run more often, once per user (connection). This because each user will need his own server session. So, if a user needs to enter a password to connect to a database, you collect the password inside the server session. Put as little as possible into your *recipes*, for example the plotting functions. These should only do the minimum work possible, since they will be called over and over again. Put everything else into reactive expressions, if appropriate.
+
+Developing the UI
+-----------------
+
+The UI is ultimately an HTML document. There are three ways we can develop our UI:
+
+1.  If you know HTML, you can use it to directly write the HTML components of the UI, while R will take care of writing the Shiny components using `htmlTemplates`.
+2.  You can write *everything* in HTML, both the HTML and the Shiny components.
+3.  The recommended method is to write everything with R.
+
+### `htmlTemplates`
+
+This is probably the best method if you already know how to write HTML. You start writing an HTML page, add CSS styling, JavaScript, whatever. Then you want to incorporate R components. Inside the HTML document you can include R objects in pairs of *double* curly braces. Then you call the `htmlTemplate()` function in the UI and pass the name of the document, plus the widget arguments. The names of such arguments must match what is inside the double curly braces. We are not going into details, you can find more information on the Shiny site.
+
+R functions returning HTML
+--------------------------
+
+-   Input functions like buttons, sliders, menus etc, all return HTML code.
+-   Output functions do the same.
+-   Layout functions define the layout of the web page.
+-   Panel functions group multiple elements into groups called *panels*.
+-   Layering functions allow the creation of tabs, navigation lists.
+-   Formatting functions (there's a lot of them) allow to modify the appearance of the UI elements.
+
+`fluidRow()`
+------------
+
+The `fluidRow()` function invisibly divides the UI space into rows. You should pass `fluidRow()` as an argument to `fluidPage()`. They stack on top of each other as shown below
+
+``` r
+fluidPage(
+  fluidRow(), # First fluid row
+  fluidRow()  # Second fluid row
+)
+```
+
+`fluidRow()` adapts dynamically its height to the object it contains. If it contains nothing, the height will be zero. This function is supposed to be used in conjunction with `column()` function. Column widths are expressed in twelves of the page width.
+
+``` r
+fluidPage(
+  fluidRow(
+    column(4), # each column takes 1/3 of the width
+    column(4),
+    column(4)
+  ),
+  fluidRow(
+    column(4, offset = 8)
+  )
+)
+```
+
+In the second `fluidRow()` the `column()` has an `offset`, which means that the column doesn't start from the leftmost position.
+
+The combined use of `fluidRow()` and `column()` allows organizing the UI into a grid. The name "fluid" comes from the fact that resizing the page will maintain the grid structure of the UI. In any case, keep in mind that the total width of the `column()`s cannot exceed 12.
+
+Note that you can also invert the order of the rows and columns. For example:
+
+``` r
+library(shiny)
+
+ui <- fluidPage(
+  column(3, sliderInput(
+    inputId = "num", 
+    label = "Choose a value",
+    min = 1, max = 100, value = 50)
+  ),
+  column(9, fluidRow(
+    plotOutput("hist")
+  ),
+  fluidRow(
+    column(8, offset = 1, verbatimTextOutput("sum"))
+  ))
+)
+
+server <- function(input, output) {
+  data <- reactive(rnorm(input$num))
+  output$hist <- renderPlot({
+    hist(data())
+  })
+  output$sum <- renderPrint({
+    summary(data())
+  })
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+This works, but for the layout shown above, it would be better to use a `sidebarPanel()`.
+
+Panels
+------
+
+### `wellPanel()`
+
+This function groups together things into a grey field.
+
+``` r
+fluidPage(
+  fluidRow(
+    column(1, "one", "two"),
+    column(1, "three", "four")
+  ),
+  fluidRow(
+    column(1, 
+      wellPanel("five", "six")
+    ),
+    column(1, "seven", "eight")
+  )
+)
+```

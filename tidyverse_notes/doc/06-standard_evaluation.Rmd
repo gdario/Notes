@@ -1,0 +1,122 @@
+# Standard Evaluation in `dplyr`
+
+```{r}
+library(tidyverse)
+```
+
+Using standard evaluation (SE for short) can be tricky. The most common case is when we have one or more column names stored in a variable, and we want to apply a function to it. The Non-standard evaluation vignette suggests three approaches:
+
+1. Model formulas.
+2. Quoting.
+3. Strings.
+
+## Selection
+
+The following approaches all fail.
+
+```{r, eval = FALSE}
+my_col <- "mpg"
+my_col_range <- "mpg:disp"
+mtcars %>% select_(~my_col) # Fails
+mtcars %>% select_(quote(my_col)) # Fails
+```
+
+These ones all succeed.
+
+```{r, eval=FALSE}
+mtcars %>% select_(my_col) # Succeeds
+mtcars %>% select(as.name(my_col)) # Succeds
+mtcars %>% select_(my_col_range) # Also succeeds, which is nice!
+```
+
+As a side note, if we want to select from a column up to the last one, the `last` function comes handy.
+
+```{r to_the_last}
+my_col <- "qsec"
+my_col_range <- paste(my_col, last(names(mtcars)), sep = ":")
+mtcars %>% select_(my_col_range)
+```
+
+Similarly if we want to start from the `first` column.
+
+## Summarise
+
+We usually face the following problems:
+
+1. Summarising multiple variables with one function.
+2. Summarising one variable with multiple functions.
+3. Summarising multiple variables with multiple functions.
+
+### Summarising multiple variables with one function
+
+We store the names of the variables we want to summarise in a vector
+
+```{r case_1}
+my_cols <- c("mpg", "hp", "wt")
+mtcars %>% select(one_of(my_cols)) %>% summarise_all(mean)
+```
+
+Note that we have called `select` and not `select_`, and we have used the `one_of` function to select the columns. If we try `select_` we obtain the wrong result.
+
+```{r case_1_wrong}
+mtcars %>% select_(my_cols) %>% summarise_all(mean)
+```
+
+### Summarising one variable with multiple functions
+
+In the NSE case this is straightforward, we just need to specify each function individually.
+
+```{r case2_nse, eval=FALSE}
+mtcars %>% summarise(mean_mpg = mean(mpg), sd_mpg = sd(mpg))
+```
+
+In the SE case:
+
+```{r case2_se, eval=FALSE}
+mtcars %>% summarise_(~mean(mpg), ~sd(mpg)) # Succeeds
+mtcars %>% summarise_("mean(mpg)", "sd(mpg)") # Succeeds
+dots <- list("mean(mpg)", "sd(mpg)")
+mtcars %>% summarise_(.dots = dots) # Also succeeds
+```
+
+In each case we must build the expressions "by hand". In other words, we cannot do something like:
+
+```{r case2_nope, eval=FALSE}
+my_col <- "mpg"
+mtcars %>% summarise_(mean(my_col)) # Fails
+```
+
+### Summarising multiple variables with multiple functions
+
+In the NSE case this works without problems if we use `funs` to create a list of functions and apply it with `summarise_all`.
+
+```{r}
+mtcars %>% select(mpg, cyl, disp) %>% summarise_all(funs(mean = mean, stdev = sd))
+```
+
+What *does not* work is applying a function that returns multiple values.
+
+```{r case_3, eval = FALSE}
+mtcars %>% select(mpg, cyl) %>% summarise_all(summary)
+```
+
+## Worked example: renaming the column of a tibble with the content of a variable
+
+Let's suppose we have a tibble and we want to rename one of its columns, but the new name is stored in a variable. 
+
+```{r worked_example}
+dfr <- tibble(col_a = 1:4, col_b = 4:1)
+new_col_name <- "col_x"
+```
+
+If we try to assign the column name directly using `rename_`, we will fail.
+
+```{r, eval=FALSE}
+dfr %>% rename_(new_col_name = col_x) # Fails
+```
+The `rename` and `rename_` functions expect named arguments. We can create one using `setNames`. The trick to make things work is to use the `.dots` argument as shown below.
+
+```{r}
+dfr %>% rename_(.dots = setNames("col_a", new_col_name))
+```
+

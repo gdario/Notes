@@ -1,0 +1,29 @@
+# Tidyr
+
+```{r}
+library(tidyverse)
+df <- tibble(treatment_a = rnorm(5), 
+  treatment_b = rnorm(5), 
+  names = LETTERS[1:5])
+```
+
+## Introduction
+
+### Gathering
+
+Simple gathering can be performed on the above dataset as shown below:
+
+```{r simple_gathering}
+df %>% gather(key = treatment, value = glucose, -names)
+```
+
+This version, based on NSE, works fine for interactive calculations. The SE equivalent is `gather_`.
+
+```{r gather_}
+cols_to_aggregate <- c("treatment_a", "treatment_b")
+key_col = "treatment"
+val_col = "glucose"
+df %>% gather_(key_col, val_col, cols_to_aggregate)
+```
+
+## Examples

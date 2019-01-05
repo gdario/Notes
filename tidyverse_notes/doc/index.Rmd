@@ -1,0 +1,3 @@
+# Preface {-}
+
+This is just a collection of notes on the libraries composing the `Tidiverse`. The purpose is to cover the content of the vignettes, when available, and of the manuals of the main packages forming the tidyverse.

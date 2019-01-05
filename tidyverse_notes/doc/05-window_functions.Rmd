@@ -1,0 +1,113 @@
+# Window functions in `dplyr`
+
+We use the `Lahman` package, containing the database of pitching, hitting and fielding statistics for Major League Baseball from 1871 to 2015. The database is composed of the following main tables:
+
+- Master: player names, dates of birth, death, etc.
+- Batting: batting statistics.
+- Pitching: pitching statistics
+- Fielding: fielding statistics.
+
+Other tables are available, but we don't consider them here.
+
+```{r}
+library(tidyverse)
+library(Lahman)
+```
+
+The `Batting` table contains `r nrow(Batting)` rows and `r ncol(Batting)` columns. Below we select the columns `playerID`, `yearID`, `teamID`, `G` (games, number of games in which a player played), `AB` (at bats), `R` (runs), `H` (hits).
+
+```{r}
+batting <- select(tbl_df(Batting), playerID, yearID, teamID, G, AB:H) 
+batting <- arrange(batting, playerID, yearID, teamID)
+players <- group_by(batting, playerID)
+```
+
+Note that we order by `playerID` and then by `yearID` so that, within a `playerID`, the `yearID` is already sorted. This ordering is important, since `lead` and `lag` know nothing about the columns on which they are applied, and they just apply positionally. In other words, a lag-1 operation will look at the previuos element in the same column, irrespective of whether it is sorted or not.
+For example:
+
+```{r}
+tb <- tibble::tibble(x = c(1, 3, 4, 2, 6, 5))
+filter(tb, x > lag(x))
+```
+
+The filtering leaves only the elements that are greater than the element that precedes them.
+
+Going back to the `player` dataset, it has the following characteristics:
+
+- `batting`: `r nrow(batting)` rows and `r ncol(batting)` columns.
+- `players`: `r nrow(players)` rows and `r ncol(players)` columns.
+
+## Types of Window Functions
+
+### Windowed rank functions
+
+There are six variations built upon base R's `rank`. The first three return integer ranks.
+
+1. `row_number` does not break ties.
+2. `min_rank` breaks ties creating gaps.
+3. `dense_rank` breaks ties without creating gaps.
+
+For example, using the same example as in the vignette.
+
+```{r integer_ranking}
+x <- c(1, 1, 2, 2, 2)
+row_number(x)
+min_rank(x)
+dense_rank(x)
+dense_rank(desc(x))
+```
+
+More in detail, let's see how `row_number` behaves in the following situations:
+
+```{r row_number}
+set.seed(123)
+x1 <- c(2, 1, 1, 2, 2, 3, 1, 3, 3)
+row_number(x1)
+x2 <- sample(1:10)
+x2
+row_number(x2)
+```
+
+In the second case there are no ties, while in the first case there are several.
+
+```{r ties_management}
+row_number(x1)
+min_rank(x1)
+dense_rank(x1)
+```
+
+If we want to reverse the ranking, we just need to use `desc`, as shown in the last example.
+
+Three more functions return a value between 0 and 1.
+
+1. `percent_rank` rescales `min_rank` between 0 and 1.
+2. `cume_dist` is the proportion of values less than or equal to the current rank.
+3. `ntile` breaks the input vector into buckets.
+
+
+```{r percent_ranking}
+percent_rank(x)
+percent_rank(desc(x))
+cume_dist(x)
+ntile(x, 3)
+```
+
+Note that `cume_dist` is the cumulative distribution function. It is very different from `percent_rank`. The `ntile` function returns a vector with the bin number each values falls in. 
+
+### Example with the `players` dataset
+
+The `players` dataset is grouped subset of the `Batting` dataset. The meaning of the non-obvious variables is:
+
+- G: Games. Number of games played.
+- AB: At bats.
+- R: Runs.
+- H: Hits. Times reached base.
+
+If we want to know the three years in which each player played the largest number of games:
+
+```{r three_years_most_games, eval=FALSE}
+players %>% filter(min_rank(desc(G)) <= 3)
+```
+
+
+

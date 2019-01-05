@@ -1,0 +1,9 @@
+*.hdf5
+.ipynb_checkpoints/
+*~
+checkpoints/
+src/tf_logs/
+../.idea/
+OLD/
+tf_logs/
+.idea/

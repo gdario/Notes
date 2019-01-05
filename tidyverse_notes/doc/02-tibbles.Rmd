@@ -1,0 +1,111 @@
+# Tibbles
+
+```{r, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(magrittr)
+```
+
+## Introduction
+
+Tibbles are an improvement over data frames. They have a similar API, that allows the easy use of list-columns.
+
+```{r}
+lst <- setNames(lapply(seq(1, 9, 3), function(i) i:(i + 2)), 
+  c("A", "B", "C"))
+tb1 <- tibble(x = 1:3, y = lst)
+tb1
+```
+
+List-columns can be accessed with the usual data frame notation, although care should be taken when we want to access the values, rather than a sub-list.
+
+```{r list_columns}
+tb1[[2]]    # Returns the second columns, i.e. the list
+tb1[1, 2]   # Returns a sub-list
+tb1[[1, 2]] # Return the vector contained in the sub-list
+```
+
+List-columns are generally created by `do`. In this case we have created them manually.
+
+### Name checking
+
+By default tibbles do not check the names
+
+```{r}
+tb2 <- tibble("A re@lly *Bad* Name" = 1:3)
+names(tb2)
+```
+
+### Lazy evaluation of columns
+Columns in a tibble can be based on existing ones, thanks to lazy evaluation.
+
+```{r}
+tb3 <- tibble(
+  x = seq(0, 2*pi, length.out = 10),
+  y = sin(x)
+)
+plot(tb3)
+```
+
+### Row names
+Row-names are deprecated, since all information should have its own column. Subsetting throws away attributes and this is often the cause of nasty bugs.
+
+### Recycling
+It only recycles vectors of lenght 1. Recycling can be powerful, but is a frequent cause of problems.
+
+### Coercion
+
+To coerce objects, in particular lists, into tibbles use `as_tibble`.
+It doesn't change strings into factors and is much faster, especially when combining long lists into one object.
+
+```{r}
+ll <- list(a = 1:3, b = 4:6, c = LETTERS[1:3])
+str(as.data.frame(ll))
+str(as_data_frame(ll))
+```
+
+## Examples
+
+### Adding new rows and columns
+
+```{r add_row_column}
+df <- tibble(x = 1:3, y = 3:1)
+df %>% add_column(z = letters[1:3], w = LETTERS[3:1])
+df %>% add_row(x = c(9, 10), y = c(10, 9))
+```
+
+### Equality
+
+```{r all_equal}
+df1 <- df
+df2 <- df[c(3, 1, 2), ] # Scrambled version of df1
+all_equal(df1, df2)
+```
+
+### Coercion
+
+Coercion automatically adds suitable column names via `repair_names`.
+
+```{r as_tibble}
+m <- matrix(1:16, nrow = 4)
+as_tibble(m)
+```
+
+### Finding columns
+
+`has_name` is a convenient way to test for the presence of one or more column names.
+
+```{r has_name}
+df <- tibble(col1 = 1:3, col2 = 3:1, col3 = c('a', 'b', 'c'))
+has_name(df, c('col1', 'col3'))
+```
+
+### Rownames to columns
+
+`rowname_to_column` and `column_to_rowname` are two handy functions.
+
+```{r rowname_to_and_from_column}
+df %<>% column_to_rownames(var = "col3")
+df
+rownames_to_column(df, var = "row_names")
+```
+

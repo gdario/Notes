@@ -1,0 +1,79 @@
+# magrittr
+
+## General Introduction
+
+The `%>%` operator is the workhorse of the `magrittr` package. These are the main uses.
+
+1. Unary function calls: `x %>% f` is equivalent to `f(x)`.
+2. `lhs` as the first argument of `rhs`: `x %>% f(y)` is equivalent to `f(x, y)`.
+3. `lhs` elsewhere in `rhs`: `y %>% f(x, .)` is equivalent to `f(x, y)` and `z %>% f(x, y, arg = .)` is equivalent to `f(x, y, arg = z)`.
+3. Using the dot for secondary purposes: if the placeholder is used in nested functions (like in `nrow` in the example), it will also be placed as the first argument. This can produce errors or, worse, the wrong result. Example: `iris %>% subset(1:nrow(.) %% 2 == 0)` is equivalent to `iris %>% subset(., 1:nrow(.) %% 2 == 0)`. In this case the behaviour is the desired one, but sometimes it is not.
+It is possible to ovverride this behaviour by enclosing the `rhs` in braces. Example: `1:10 %>% {c(min(.), max(.))}`.
+4. Forcing evaluation of `rhs` before piping the `lhs`: if the `rhs` produces a call or a function, we need to evaluate it before "injecting" the `lhs`. This can be done enclosing the `rhs` in parentheses. For example `1:10 %>% (call("sum"))` or `a %>% (function(x) x^2)`.
+5. Lambdas: a `rhs` behaves like a lambda. `x %>% {x + 1}` is the same as `function(x) return(x + 1)`.
+
+## Examples 
+
+We start loading the libraries we need.
+
+```{r, message=FALSE}
+library(tidyverse)
+library(magrittr)
+M <- rnorm(200) %>% matrix(, nrow = 20)
+```
+
+The "tee" operator `%T>%` sends the output of its LHS argument to its RHS function and the one that follows. It acts like a T joint. Note that this works with the step after the "tee" operator does not return a value, but just a side effect, for example produces a plot, or saves a file. In the example below, we chain two functions that both return a value, and the final output is not what we want.
+
+```{r tee_operator, eval=FALSE}
+M %T>% sum %>% mean
+```
+
+Sometimes it is tempting to combine multiple functions in a composite one but this often fails, as shown below.
+
+```{r, eval=FALSE}
+# Using `sum`
+M %>% sum(colSums)       # Fails
+M %>% sum(colSums(.))    # Returns the WRONG result!
+M %>% colSums %>% sum    # Succeeds
+M %>% {sum(colSums(.))}  # Succeeds
+# Using `mean`
+M %>% mean(colSums(.))   # Fails
+M %>% colSums %>% mean   # Succeeds
+M %>% {mean(colSums(.))} # Succeeds
+```
+
+The failures are due to the fact that, when we use the dot as a placeholder, this is also automatically used as the first argument
+of the `rhs`. Using braces prevents this behaviour.
+The "exposition" operator `%$%` does the job of `$`, making the elements of lists and data frames accessible. It is a short-hand for `with`.
+
+```{r numeric_iris}
+numeric_iris <- iris %>% select(-Species) %>% slice(1:10)
+```
+
+If we try to compute the sum of `Sepal.Width` we fail because the object is not visible.
+
+```{r, eval=FALSE}
+numeric_iris %>% sum(Sepal.Width) # Fails. Sepal.Width not found
+```
+
+We may think of accessing the object via `$`
+
+```{r}
+numeric_iris %>% sum(.$Sepal.Length) # WRONG!
+sum(numeric_iris$Sepal.Length) # This is the correct result
+```
+
+but we obtain the wrong result! To see why, let's print the first few lines of `.$Sepal.Length`.
+
+```{r head_sepal_lenght}
+numeric_iris %>% print(.$Sepal.Length)
+```
+
+As we can see, the whole data frame has been printed, and not only the `Sepal.Length` column. It is not completely clear to me what the problem is, but it seems that the dot operator can only return the whole dataset. If we want to extract particular columns, we need the `%$%` operator. Some functions, like `lm`, have a data argument, which makes the columns visible.
+Using `%$%`, in fact, produces the correct result.
+
+```{r}
+numeric_iris %$% sum(Sepal.Length)
+```
+
+The idea behind the exposition operator is to take care of the cases where a `data` argument is not available. With functions like `lm` and `aggregate` such argument is present, and one can use the column names without formality.
