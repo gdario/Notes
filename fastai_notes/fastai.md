@@ -36,3 +36,8 @@ Callbacks add functionality to the training loop. One example is the `OneCycleSc
 ### Extending `Learner` with `train`
 
 `train` contains a number of callbacks that can be more easily used with `Learner` objects. Above, we have created a `OneCycleScheduler` and passed it to the `Learner`. We can, however, just use the method `learn.fit_one_cycle()`. Similarly, one can use the `learn.find_lr` to find a good learning rate.
+
+## `basic_train`
+
+The `basic_train` module defines the `Learner` class, with the associated methods to execute the training loop, get the predictions, inspect them, summarize the results, run TTA, perform discriminative layer training etc.
+
