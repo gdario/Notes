@@ -39,5 +39,12 @@ Callbacks add functionality to the training loop. One example is the `OneCycleSc
 
 ## `basic_train`
 
-The `basic_train` module defines the `Learner` class, with the associated methods to execute the training loop, get the predictions, inspect them, summarize the results, run TTA, perform discriminative layer training etc.
+The `basic_train` module defines the `Learner` class, with the associated methods to execute the training loop, get the predictions, inspect them, summarize the results, run TTA, perform discriminative layer training etc. `basic_train` puts together a `DataBunch` object and a model to define a `Learner`, which is the entry point of most of the `Callback` functions. In addition, a `Learner` can receive the following arguments:
 
+- `opt_func`: the optimizer.
+- `loss_func`: the loss function.
+- `metrics`: a collection of evaluation metrics.
+- `wd`: the default weight decay.
+- `true_wd`: if set, uses the methods outlined in "Fixing Weight Decay Regularization in Adam".
+- `bn_wd`: if `False` weight decay will be removed from batchnorm layers.
+- `train_bn`: ensures that batchnorm layer learnable parameters are trained even for frozen layer groups.
