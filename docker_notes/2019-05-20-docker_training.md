@@ -1,16 +1,5 @@
 # Mateusz Filipowicz - Docker Training Day 1  <2019-05-20 Mon>
 
-1. Problems and issues without containers.
-    - Time consuming.
-    - Space optimization.
-    - New ship developed after the container and not the other way around.
-    - containers fit multiple different means of transportation.
-    - Cheap movement of products from one marketplace around the world.
-    - Low cost container ships.
-    - Temperature control for degradable goods.
-    - Special cases: live animals, cars, technological goods. Same container for each one of them.
-2. Things that containers solved or added value to (benefits).
-
 You shouldn't run Docker on its own in a production system. We will find out why in a little while.
 
 ## How to run a simple image
