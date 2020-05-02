@@ -1,0 +1,234 @@
+* <2020-05-02 Sat> Python Modules and Packages - An Overview
+
+Why modules and packages?
+
+- Simplicity.
+- Maintainability.
+- Reusability.
+- Scoping.
+
+* Writing a Module
+
+Three different styles of modules:
+
+- Written in Python.
+- Written in C and dynamically loaded at run-time.
+- Built-in module intrinsically contained in the interpreter.
+
+Create a directory called =ModulesAndPackages=. Create a =mod.py= object.
+
+* The Module Search Path
+
+Where can you =import= a module from? The interpreter searches
+
+- In the current directory.
+- In the =PYTHONPATH= environment variable list of directories.
+- The directories configured as part of your Python installation.
+
+The =sys= module contains the attribute =sys.path= showing all the folders searched by Python. If you want to add new locations to the =PYTHONPATH= you can do (note the use of raw strings):
+
+#+BEGIN_SRC python
+sys.path.append(r'path/to/my/module')
+#+END_SRC
+
+You can see the location of a module's file with =mod.__file__=.
+
+* The =import= statement
+
+Note that you can import multiple modules at once, by separating them with a comma in the =import= statement.
+
+The =import= statement can take several forms. In its simplest form it looks like =import <module_name>=. In this case the module contents are not directly accessible (they are in a separate namespace), and you must use the /dot/ notation.
+
+Individual objects can be imported as =from <module_name> import <name(s)>=. These names are directly accessible to the caller.
+
+You can import everything from a module at once with =from <module_names> import *=. Note that names beginning with an underscore will /not/ be imported. You must know all names you are importing to be sure you are not causing name collisions.
+
+You can import objects with alternative names: =from <module_name> import <name> as <alt_name>=.
+
+You can also import the whole module with an alternative name: =import <module_name> as <alt_module_name>=.
+
+A module can also be imported from within a function. For example:
+
+#+BEGIN_SRC python
+def importer():
+    from mod import printy
+    printy('Hello Everyone')
+#+END_SRC
+
+Note that if you define a function like
+
+#+BEGIN_SRC python
+def importer2():
+    from mod import *
+#+END_SRC
+
+you will get an error message, saying that =*= is only allowed at the module level. When importing from inside a function, it is useful to wrap the =import= statement in a =try...except= statement. For example:
+
+#+BEGIN_SRC python
+try:
+    import foo
+except ImportError
+    print('Module not found')
+#+END_SRC
+
+* The =dir()= function
+
+The =dir()= function is a built-in function that returns a list of defined names in a namespace. Without arguments, it produces an alphabetically sorted list of names in the current local symbol table. If you import a module =mod=, the module, /but not its contents/ will show up in the symbol table. If you import objects from the module, those will appear in the symbol table.
+
+* Executing a module as a script
+
+If you execute =mod.py= it will return no output, as it only defines things. If you include some =print= statements, they will be shown also when you import the module. You probably want to see those =print= messages when you /run/ the module, but not when you /import/ it. If you don't want to execute the code when you import, use the =__name__= variable.
+
+The =__name__= variable is set to the name of the module when it is imported and it is set to =__main__= when it is run as a standalone script. If you import a module in a REPL, when you do =dir()= you will see a ='__name__'= variable, but that one is the /REPL's/, not the /module's/. For the module you have to type =mod.__name__=.
+
+* Reloading a module
+
+Modules are imported only once per session. This is fine for function and class definitions (unless you modify them), but you may have executable statements as well (for initialization purposes, for example).
+
+If you need to reload the module, you can either restart the interpreter or use the =reload= function from the =importlib= module. For example:
+
+#+BEGIN_SRC python
+import importlib
+importlib.reload(mod)
+#+END_SRC
+
+* Python Packages
+
+Up to now we have considered only one module. When we have multiple modules, we must organize them in a packages. Packages allow for a hierarchical structuring of the module namespace using dot notation. Create a =pkg= folder containing two modules, =mod1.py= and =mod2.py=. The =mod1.py= module contains
+
+#+BEGIN_SRC python
+def load_data():
+    print('Loading data using mod1.load_data()')
+
+
+class Customer:
+    pass
+
+#+END_SRC
+
+while =mod2.py= contains
+
+#+BEGIN_SRC python
+def clean_data():
+    print('Cleaning data using mod2.clean_data()')
+
+
+class Location:
+    pass
+
+#+END_SRC
+
+- Now we can import the modules as =import pkg.mod1, pkg.mod2=.
+- You can also import individual items, as =from pkg.mod1 import load_data=. You can obviously use alternative names.
+- You could import the modules as in =from pkg import mod1=.
+- *Important*: if you =import pkg=, you have no access to the individual modules, i.e., you cannot do =pkg.mod1=. You cannot import the package by itself.
+
+There is a way of importing a package, but this relies on /package initialization/.
+
+* Package Initialization
+
+If a file named =__init__.py= is present in a package directory, it is invoked when the package or a module in it is imported. If we create an =__init__.py= like the one below
+
+#+BEGIN_SRC python
+print(f'Invoking __init__.py for {__name__}')
+alist = ['spam', 'bacon', 'eggs']
+#+END_SRC
+
+When we import the package a message will be printed and a global variable (a list) will be added to the symbol table (as =pkg.alist=). Importing =pkg= automatically imports =__init__.py=. The other modules, however, are not imported. If we now modify =mod1.py= as:
+
+#+BEGIN_SRC python
+def load_data():
+    print('Loading data using mod1.load_data()')
+    from pkg import alist
+    print(f'This is from pkg - {alist}')
+
+
+class Customer:
+    pass
+#+END_SRC
+
+if we do =from pkg import mod1=, =__init__.py= is also executed.
+
+The =__init__.py= file can also be used to automatically import the modules from a package. For example, if we modify ==__init__.py== as
+
+#+BEGIN_SRC python
+print(f'Invoking __init__.py for {__name__}')
+import pkg.mod1, pkg.mod2
+#+END_SRC
+
+if we now do =import pkg=, the modules =mod1= (you have to remove the lines that import =pkg= we added earlier) and =mod2=
+
+* Importing * From a Package
+
+To illustrate the use of the wildcard we will add a couple more modules, =mod3.py= and =mod4.py=. If we try =from pkg import *= it doesn't import anything. In order to be able to do this type of import, we need to include the =__all__= attribute (known as an /all list/). We need to modify the =__all__.py= file as
+
+#+BEGIN_SRC python
+__all__ = ['mod1', 'mod2', 'mod3', 'mod4']
+#+END_SRC
+
+The =__all__= list is a list of module names as strings without the =.py= extension. If we now do =from pkg import *= all the modules are available. This type of import is however considered a bad development practice. You can also limit the scope of what is imported from a single module. For example, if you modify =mod1.py= as follows.
+
+#+BEGIN_SRC python
+__all__ = ['load_data']
+
+def load_data():
+    print('Loading data using mod1.load_data()')
+
+
+class Customer:
+    pass
+#+END_SRC
+
+if you import =from pkg.mod1 import *= it will import only =load_data()= but not =Customer=.
+
+* Subpackages
+
+Packages can be nested within packages down to an arbitrary depth. For this example, remove the =__init__.py= file, create, within the =pkg= folder, two subfolders =sub_pkg1= and =sub_pkg2=, and move =mod1.py= and =mod2.py= to =sub_pkg1= and =mod3.py= and =mod4.py= to =sub_pkg2=. Now you can 
+
+- =import pkg.sub_pkg1.mod1= and use =pkg.sub_pkg1.mod1.load_data()=.
+- import =mod2= as =from pkg.sub_pkg1 import mod2=.
+- =from pkg.sub_pkg2.mod2 import merge_data=
+- =from pkg.sub_pkg2.mod4 import Winner as Result=.
+
+In a module you can refer function and classes defined in sibling subpackages. For example, if =mod3.py= is part of =sub_pkg2=, we can use a function defined in =sub_pkg1= as follows:
+
+#+BEGIN_SRC python
+def merge_data():
+    print(f'Merging data using merge_data()')
+
+
+class Message:
+    pass
+
+from pkg.sub_pkg1.mod1 import load_data
+load_data()
+#+END_SRC
+
+* Relative imports
+
+It is possible to use relative imports to do the following.
+
+- If you want to evaluate to the parent package, use =from .. import <sub_pkg>=.
+- If you want to evaluate to the sub-package of the parent package, you can use =.. sub_pkg=
+
+This means that we can rewrite the last snippet as
+
+#+BEGIN_SRC python
+def merge_data():
+    print(f'Merging data using merge_data()')
+
+
+class Message:
+    pass
+
+from .. import sub_pkg1
+print(sub_pkg1)
+
+from ..sub_pkg1.mod1 import load_data
+load_data()
+#+END_SRC
+
+
+* QUESTIONS
+
+Can/should you add =__init__.py= to subpackages?
