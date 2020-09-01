@@ -1,0 +1,130 @@
+* Fundamentals of Cypher
+
+** Filtering Query Results
+
+*** The WHERE Clause
+
+These two approaches are equivalent.
+
+#+BEGIN_SRC cypher
+  //query using equality check in the MATCH clause
+  MATCH (j:Person {name: 'Jennifer'})
+  RETURN j
+
+  //query using equality check in the WHERE clause
+  MATCH (j:Person)
+  WHERE j.name = 'Jennifer'
+  RETURN j
+#+END_SRC
+
+Boolean operators are =AND=, =OR=, =XOR=, =NOT=. For example:
+
+#+BEGIN_SRC cypher
+  //query using inequality check in the WHERE clause
+  MATCH (j:Person)
+  WHERE NOT j.name = 'Jennifer'
+  RETURN j
+#+END_SRC
+
+Ranges can be selected as follows:
+
+#+BEGIN_SRC cypher
+  MATCH (p:Person)
+  WHERE 3 <= p.yearsExp <= 7
+  RETURN p
+#+END_SRC
+
+One can check for the existence of a property with the =exists()=
+method.
+
+#+BEGIN_SRC cypher
+  //Query1: find all users who have a birthdate property
+  MATCH (p:Person)
+  WHERE exists(p.birthdate)
+  RETURN p.name
+
+  //Query2: find all WORKS_FOR relationships that have a startYear property
+  MATCH (p:Person)-[rel:WORKS_FOR]->(c:Company)
+  WHERE exists(rel.startYear)
+  RETURN p, rel, c
+#+END_SRC
+
+One can test string property values with =STARTS WITH=, =CONTAINS=,
+=ENDS WITH=:
+
+#+BEGIN_SRC cypher
+  //check if a property starts with 'M'
+  MATCH (p:Person)
+  WHERE p.name STARTS WITH 'M'
+  RETURN p.name
+
+  //check if a property contains 'a'
+  MATCH (p:Person)
+  WHERE p.name CONTAINS 'a'
+  RETURN p.name
+
+  //check if a property ends with 'n'
+  MATCH (p:Person)
+  WHERE p.name ENDS WITH 'n'
+#+END_SRC
+
+Regular expressions can be used as well.
+
+#+BEGIN_SRC cypher
+  MATCH (p:Person)
+  WHERE p.name =~ 'Jo.*'
+  RETURN p.name
+#+END_SRC
+
+It is possible to check if a property value appears in a list with the
+=IN= keyword.
+
+#+BEGIN_SRC cypher
+  MATCH (p:Person)
+  WHERE p.yearsExp IN [1, 5, 6]
+  RETURN p.name, p.yearsExp
+#+END_SRC
+
+*** Filtering on patterns
+    :PROPERTIES:
+    :CUSTOM_ID: filtering-on-patterns
+    :END:
+
+It is possible to filter for the existence or not existence of patterns.
+
+#+BEGIN_SRC cypher
+  //Query1: find which people are friends of someone who works for Neo4j
+  MATCH (p:Person)-[r:IS_FRIENDS_WITH]->(friend:Person)
+  WHERE exists((p)-[:WORKS_FOR]->(:Company {name: 'Neo4j'}))
+  RETURN p, r, friend
+
+  //Query2: find Jennifer's friends who do not work for a company
+  MATCH (p:Person)-[r:IS_FRIENDS_WITH]->(friend:Person)
+  WHERE p.name = 'Jennifer'
+  AND NOT exists((friend)-[:WORKS_FOR]->(:Company))
+  RETURN friend.name
+#+END_SRC
+
+Optional patterns allow the retrieval of results even when they do not
+match the entire pattern or all the criteria.
+
+#+BEGIN_SRC cypher
+  //find all people whose name starts with J and who may work for a company.
+  MATCH (p:Person)
+  WHERE p.name STARTS WITH 'J'
+  OPTIONAL MATCH (p)-[:WORKS_FOR]-(other:Company)
+  RETURN p.name, other.name
+#+END_SRC
+
+More complex patterns
+
+#+BEGIN_SRC cypher
+  //Query1: find who likes graphs besides Jennifer
+  MATCH (j:Person {name: 'Jennifer'})-[r:LIKES]-(graph:Technology {type: 'Graphs'})-[r2:LIKES]-(p:Person)
+  RETURN p.name
+
+  //Query2: find who likes graphs besides Jennifer that she is also friends with
+  MATCH (j:Person {name: 'Jennifer'})-[:LIKES]->(:Technology {type: 'Graphs'})<-[:LIKES]-(p:Person),
+        (j)-[:IS_FRIENDS_WITH]-(p)
+  RETURN p.name
+#+END_SRC
