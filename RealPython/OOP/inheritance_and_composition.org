@@ -1,0 +1,1042 @@
+* Inheritance and Composition: A Python OOP
+Guide[[#Inheritance-and-Composition:-A-Python-OOP-Guide][¶]]
+  :PROPERTIES:
+  :CUSTOM_ID: Inheritance-and-Composition:-A-Python-OOP-Guide
+  :END:
+
+** Course Goals[[#Course-Goals][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: Course-Goals
+   :END:
+
+- Create classes that inherit from one another.
+- Design class hierarchies with UML diagrams.
+- Use interfaces and abstract classes.
+- Use multiple inheritance and understand its drawbacks.
+- Build complex classes with composition.
+- Change run-time behavior with composition.
+
+** What are inheritance and
+composition?[[#What-are-inheritance-and-composition?][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: What-are-inheritance-and-composition?
+   :END:
+
+They are techniques to write better Python code. Both do it by modifying
+classes so that we can write less code, and make the classes more
+extensible.
+
+- Inheritance is about identifying the common attributes and behaviors
+  that exist between objects.
+- Composition is about identifying how objects are composed of one
+  another.
+
+** Inheritance[[#Inheritance][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: Inheritance
+   :END:
+
+Large projects have large number of classes. These classes are often
+related in some way. One class, for example, may be similar to another
+with some small modifications. Copying and pasting is not a good
+strategy because if we need to modify something in a class, we have to
+modify the same thing, with minor variations, in many places, and this
+is error prone.
+
+Inheritance models an *is a* relationship. For example, a cat /is an/
+animal, an apple /is a/ fruit. Fish is both a food and an animal. This
+relationship is not symmetrical: all cats are animals but not all
+animals are cats. So, if a cat is an animal, it is a specialized version
+of an animal, and it inherits all the /attributes/ and /behaviors/ that
+are shares among all animals. It may have attributes and behaviors of
+its own (it is furry and it meows).
+
+Let's look at some classes that use inheritance. We may have a class
+=Employee= with attributes =name=, =age=, =id=, =wage= and behaviors
+=clock_in()=, =work()=, =clock_out()= and =report_info()=.
+
+We can add another class, =Waitress=, who is a type of employee. The
+waitress has all the attributes and behaviors of the =Employee= class,
+but it also adds some new ones like =shifts=, =tips_totals=,
+=take_break()= and =work()=. Note that the latter has the same name as
+the =Employee= class (so she has 5 methods in total), but the
+implementation is different.
+
+[[file:fig/inheritance.png]]
+
+We can create a new =Cashier= class that inherits from =Employee=. This
+one only adds a new =customer_served= attribute and modifies the
+=work()= method.
+
+** Composition[[#Composition][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: Composition
+   :END:
+
+Composition models a *has a* or a *part of* relationship. For example, a
+car /has a/ en engine, i.e., the engine is a /part of/ the car. We may
+have a =Car= class with =brand=, =model=, =year= =engine= attributes and
+=turn_on()=, =accelerate()=, =park()= and =turn_off()= methods. Python
+does not have a =engine= class, so we must create one, which may, in
+turn, have the =cylinders=, =efficiency=, =weight= attributes and the
+=ignite()= method. We may have some code in the =Car='s =turn_on()=
+method that calls the =Engine='s =ignite()= method. Note that:
+
+[[file:fig/composition.png]]
+
+1. The =Car='s =accelerate()= method has access to the =Engine='s
+   =efficiency= attribute, because the =Car= object keeps track of the
+   =engine= attribute which contains an =efficiency= attribute.
+2. The =ignite()= method does not have access to the =brand= attribute,
+   as the =Engine= class is "blind" to where it is being used.
+
+In Python a class can be a /component/ of a /composite/ class. In the
+example above, =Engine= is a /component/ of the /composite/ class =Car=.
+
+** Inheritance in Python[[#Inheritance-in-Python][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: Inheritance-in-Python
+   :END:
+
+Let's create an empty class with no attributes and no methods. The
+=pass= keyword in general allows creating classes and functions that do
+nothing (can be used as a placeholder). If we use =dir()= on this class,
+we see a lot of "dunder" methods.
+
+In [3]:
+
+#+BEGIN_EXAMPLE
+  class MyClass:
+      pass
+
+  c = MyClass()
+  print(dir(c))
+#+END_EXAMPLE
+
+#+BEGIN_EXAMPLE
+  ['__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__']
+#+END_EXAMPLE
+
+We can create an instance of the built-in =object= class.
+
+In [4]:
+
+#+BEGIN_EXAMPLE
+  o = object()
+  print(dir(o))
+#+END_EXAMPLE
+
+#+BEGIN_EXAMPLE
+  ['__class__', '__delattr__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__']
+#+END_EXAMPLE
+
+The two instances have pretty much the same methods, with some extra
+ones (e.g. =__weakref__=) in =c=.
+
+The =o= object was instanciated from the =object= class, which is built
+into Python, and that defines most of the "dunder" methods that we see
+in =c=. The extra members in =c= come from elsewhere, but this is beyond
+the scope of this course.
+
+Another place where inheritance is used is in exceptions. They can be
+thrown up a call stack and caught anywhere in that stack. If no code
+catches the exception before it reaches the top of the stack, the
+program crashes, and we are left with a stack-trace. For example, let's
+define a =MyError= class and raise it.
+
+In [5]:
+
+#+BEGIN_EXAMPLE
+  class MyError:
+      pass
+
+  raise MyError()
+#+END_EXAMPLE
+
+#+BEGIN_EXAMPLE
+  ---------------------------------------------------------------------------
+  TypeError                                 Traceback (most recent call last)
+  <ipython-input-5-27957d5a1b1b> in <module>
+        2     pass
+        3 
+  ----> 4 raise MyError()
+
+  TypeError: exceptions must derive from BaseException
+#+END_EXAMPLE
+
+This failed because our class must inherit from =BaseException=. For
+example, syntax errors inherits from =BaseException=. Note however that
+=BaseException= is not supposed to be inherited from directly, so we use
+its next child, the =Exception= class. This is the class the official
+documentation recommends inheriting from.
+
+The =Exception= class has an attribute for a message to the user. We can
+define this using =__init__()= and =super()=.
+
+In [6]:
+
+#+BEGIN_EXAMPLE
+  class MyError(Exception):
+      def __init__(self, message):
+          super().__init__(message)
+          
+  raise MyError("Something went wrong")
+#+END_EXAMPLE
+
+#+BEGIN_EXAMPLE
+  ---------------------------------------------------------------------------
+  MyError                                   Traceback (most recent call last)
+  <ipython-input-6-c4743f4f2e2c> in <module>
+        3         super().__init__(message)
+        4 
+  ----> 5 raise MyError("Something went wrong")
+
+  MyError: Something went wrong
+#+END_EXAMPLE
+
+** UML Diagrams[[#UML-Diagrams][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: UML-Diagrams
+   :END:
+
+The standard method of creating diagrams to represent the relationships
+among classes is the Unified Modeling Language, or *UML*. It is often
+used to show class hierarchies. By planning a project before we start
+coding, we can make better design choices.
+
+UML can contain + and - signs to denote /public/ and /private/
+accessibility. Python does not formally support formal access modifiers,
+and everything is public. For our purposes, we are just going to mark
+every member of every class as "public" with a + sign. You may also see
+a data type following a colon, which describes the type of the
+attribute. A type following a method name indicates the return type of
+the method.
+
+[[file:fig/uml.png]]
+
+Arrows express inheritance. The arrow goes from the /child/ class to
+(i.e., points to) the /parent/ class.
+
+[[file:fig/uml_inheritance.png]]
+
+We can similarly express composition. For that we draw a solid diamond
+arrow from the /composite/ class to the /component/ class. We can add a
+number to show the number of component instances contained in the
+composite class. If instead of a number we have a =*= symbol, this means
+that the composite class can contain a variable number of component
+instances. A *range* indicates that the composite class can contain a
+certain range of instances. For example:
+
+- (1..4) means between 1 and 4.
+- (1..*) means at least one.
+
+[[file:fig/uml_composition.png]]
+
+** Interfaces[[#Interfaces][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: Interfaces
+   :END:
+
+An interface is a description of the attributes and behaviors an object
+has. This consists of
+
+- The set of attributes and methods that make up classes.
+- Not the implementation of the method, just the declaration.
+
+An interface, therefore, is a list of declarations, but not of
+definitions. It is like saying "all mammals can move", without
+specifying how they move. Some languages, such as C# or Java, have an
+actual mechanism called an interface which lists these class members,
+but Python does not, partly because, unlike most languages, Python
+supports multiple inheritance. We will focus on the concept of
+interfaces.
+
+*** Interfaces example[[#Interfaces-example][¶]]
+    :PROPERTIES:
+    :CUSTOM_ID: Interfaces-example
+    :END:
+
+Let's assume that the interface, /not/ shown in the diagram below, but
+let's pretend that it implements two methods: =quack()= and =waddle()=.
+In other words, some part of our program needs an object that conforms
+to this interface. Three of the four classes in the diagram below
+conform to this interface.
+
+[[file:fig/uml_interface.png]]
+
+*** Liskov Substitution Principle[[#Liskov-Substitution-Principle][¶]]
+    :PROPERTIES:
+    :CUSTOM_ID: Liskov-Substitution-Principle
+    :END:
+
+If =S= is a subclass of =T= objects of type =T= may be replaced by
+objects of type =S= without altering any property of the program.
+Anywhere the program expects a =Duck=, we can pass an =AttackDuck=,
+because it has the same attributes and methods. We saw this in our
+exception example, when we inherited from =Exception=, which in turn
+inherits from =BaseException=, we inherited the interface of
+=Exception=.
+
+[[file:fig/uml_liskov.png]]
+
+Let's look at the interface of an actual class.
+
+In [8]:
+
+#+BEGIN_EXAMPLE
+  class PayrollObject:
+      def __init__(self, id, name):
+          self.id = id
+          self.name = name
+          
+      def calculate_payroll(self):
+          return 12345
+#+END_EXAMPLE
+
+Typically the UML representation of an Interface starts with an "I" and
+often ends with "-or" or "-able". The interface in the UML diagram
+below, declares three members that a class must declare to conform. The
+=PayrollObject=, therefore, conforms. By the substitution principle,
+anywhere the program expects a class that conforms to this interface, we
+can pass an instance of the =PayrollObject=.
+
+[[file:fig/uml_interface2.png]]
+
+Interfaces are usually represented in a different color and contain the
+word =<<Interface>>= at the top. An interface is just a listing of
+members that conforming classes must have. When a class conforms to an
+interface, we draw a dashed line from the class to the interface and
+write =implements=.
+
+[[file:fig/uml_interface3.png]]
+
+In the diagram above, we have that:
+
+1. =Employee= is the base class or parent class of =SalaryEmployee= and
+   =HourlyEmployee= directly.
+2. =SalaryEmployee= is a child class of =Employee= and a parent class of
+   =CommissionEmployee=.
+3. =Employee= exposes an interface containing two members: =id= and
+   =name=.
+4. =HourlyEmployee= exposes an interface with three members: =id=,
+   =name= and =calculate_payroll()=.
+5. =SalaryEmployee=, =HourlyEmployee= and =CommissionEmployee= all
+   expose the =IPayrollCalculator= interface.
+6. =CommissionEmployee= inherits from =SalaryEmployee= and not from
+   =Employee=. This may mean that =SalaryEmployee= adds modifications on
+   top of the modified version of =calculate_payroll()= in
+   =SalaryEmployee=.
+
+** Implementing a class hierarchy[[#Implementing-a-class-hierarchy][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: Implementing-a-class-hierarchy
+   :END:
+
+We are going to use the concepts described above by implementing a class
+hierarchy that describes employees, measures their productivity and
+calculates their payrolls. We start creating a class called
+=PayrollSystem= that does not have any attribute. It has just one method
+that calculates the payroll, which accepts a collection of employees as
+its argument. Note that the =PayrollSystem= has not =__init__()= method.
+
+In [9]:
+
+#+BEGIN_EXAMPLE
+  class PayrollSystem:
+      def calculate_payroll(self, employees):
+          print("Calculating Payroll")
+          print("===================")
+          for employee in employees:
+              print(f'Payroll for {employee.id} - {employee.name}')
+              print(f'- Check Amount: {employee.calculate_payroll()}')
+              print('')
+#+END_EXAMPLE
+
+According to this class, employees must have names and IDs, and must
+have a method that calculates their payroll. The rest of the program
+will follow the UML diagram shown above. Any class that conforms to the
+=IPayrollCalculator= interface can be passed to the =calculate_payroll=
+method. Let's build each class one by one.
+
+We start from the base class =Employee=, which inherits only from
+=object=. Following the UML diagram, the class must contain the =.id=
+and the =.name= attributes.
+
+In [10]:
+
+#+BEGIN_EXAMPLE
+  class Employee:
+      def __init__(self, id, name):
+          self.id = id
+          self.name = name
+#+END_EXAMPLE
+
+Now let's create our first /specialized/ employee class:
+=SalaryEmployee=. This will include also a weekly salary attribute that
+will be used to calculate the payroll via the =calculate_payroll()=
+method.
+
+If we don't define an =__init__()= method for the child class, the
+=__init__()= method of the parent will be used. This, however, would
+prevent us from adding new attributes, like the =.weekly_salary=. We
+need therefore to redefine the =__init__()= method to allow for the new
+attribute. Redefining =__init__()= will overwrite the parent's method,
+so if we only write
+
+#+BEGIN_EXAMPLE
+  class SalaryEmployee(Employee):
+      def __init__(self, weekly_salary):
+          self.weekly_salary = weekly_salary
+#+END_EXAMPLE
+
+the class will not have the =.id= and the =.name= attributes, and will
+not be an actual =Employee= subclass. Rather then re-assigning these
+attributes with =self.id = id= etc, we call the =__init__()= method of
+the parent class with the =.id= and =.name= attributes. Note that we
+don't call =self=, because this method is not looking at the current
+instance, but rather at the parent.
+
+We also implement the =calculate_salary()= method, in this case just
+returning the =.weekly_salary= attribute. This may seem trivial now, but
+it will become important later.
+
+In [11]:
+
+#+BEGIN_EXAMPLE
+  class SalaryEmployee(Employee):
+      def __init__(self, id, name, weekly_salary):
+          super().__init__(id, name)
+          self.weekly_salary = weekly_salary
+          
+      def calculate_payroll(self):
+          return self.weekly_salary
+#+END_EXAMPLE
+
+Next, we create the =HourlyEmployee= which also inherits from the
+=Employee= class. This type of employee is paid by the hour, so we need
+to add two more attributes: the number of hours worked =.hours_worked=
+and the hourly rate =.hour_rate=
+
+In [12]:
+
+#+BEGIN_EXAMPLE
+  class HourlyEmployee(Employee):
+      def __init__(self, id, name, hours_worked, hour_rate):
+          super().__init__(id, name)
+          self.hours_worked = hours_worked
+          self.hour_rate = hour_rate
+              
+      def calculate_payroll(self):
+          return self.hours_worked * self.hour_rate
+#+END_EXAMPLE
+
+The last class we want to add is the =CommissionEmployee=, who both
+receive a commission, and a weekly salary. Since they are also
+=SalaryEmployee=s, this class inherits from =SalaryEmployee= rather than
+from =Employee=.
+
+For the =calculate_payroll()= method, we need to add the =.commission=
+and the =.weekly_salary= attributes. The =.weekly_salary= is an instance
+attribute of the parent, not of =CommissionEmployee=, but since we
+initialized with =super()=, we can use it. A =CommissionEmployee= is
+also a =SalaryEmployee=, so, when it calculates its payroll, it should
+do it the same way as the parent class. Let's do something a bit
+unintuitive: we create a variable =fixed= that stores the result of
+=super().calculate_payroll()=. This seems useless, as the parent
+=calculate_payroll()= method just returns the =.weekly_salary=
+attribute, so we could just access it directly. If, however, we change
+the way we calculate the salary for the =SalaryEmployee= class, this
+would change the implementation of the =calculate_payroll()= method in
+the same class. By using =super().calculate_payroll()=, we protect
+ourselves from future changes.
+
+In [13]:
+
+#+BEGIN_EXAMPLE
+  class CommissionEmployee(SalaryEmployee):
+      def __init__(self, id, name, weekly_salary, commission):
+          super().__init__(id, name, weekly_salary)
+          self.commission = commission
+          
+      def calculate_payroll(self):
+          fixed = super().calculate_payroll()
+          return fixed + self.commission
+#+END_EXAMPLE
+
+In the course, the class definitions are stored in a file =hr.py=, while
+the instances are created in =program.py=. The files should be in the
+same folder.
+
+In [14]:
+
+#+BEGIN_EXAMPLE
+  salary_employee = SalaryEmployee(1, 'John Smith', 1500)
+  hourly_employee = HourlyEmployee(2, 'Jane Doe', 40, 15)
+  commission_employee = CommissionEmployee(3, 'Kevin Bacon', 1000, 250)
+
+  payroll_system = PayrollSystem()
+  payroll_system.calculate_payroll([
+      salary_employee,
+      hourly_employee,
+      commission_employee
+  ])
+#+END_EXAMPLE
+
+#+BEGIN_EXAMPLE
+  Calculating Payroll
+  ===================
+  Payroll for 1 - John Smith
+  - Check Amount: 1500
+
+  Payroll for 2 - Jane Doe
+  - Check Amount: 600
+
+  Payroll for 3 - Kevin Bacon
+  - Check Amount: 1250
+#+END_EXAMPLE
+
+** Abstract Classes[[#Abstract-Classes][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: Abstract-Classes
+   :END:
+
+In our example above, we never instantiated the =Employee= class. It was
+created only to define the =.id= and =.name= attributes. We could create
+an instance of this class and try to pass it through the
+=PayrollSystem=, but this will fail because it does not have a
+=calculate_payroll()= method. In other words, the =Employee= class does
+/not/ conform to the =IPayrollCalculator= interface defined above. This
+is not really a problem. The =Employee= class was not created to be
+instantiated, but just to be inherited from. It is an /abstract class/.
+
+The Standard Library has an =abc= module for abstract classes. We are
+going to modify the definition of our =Employee= class making it inherit
+from =abc.ABC=. We will also create a =calculate_payroll()= method so
+that the class now conforms to the interface. The method does nothing,
+and note that it has an =@abstractmethod= decorator. By using this
+decorator we are telling Python that this is an abstract class.
+
+#+BEGIN_EXAMPLE
+  from abc import ABC, abstractmethod
+
+  class Employee(ABC):
+      def __init__(self, id, name):
+          self.id = id
+          self.name = name
+
+      @abstractmethod
+      def calculate_payroll(self):
+          pass
+#+END_EXAMPLE
+
+If we now include this modified version of the =Employee= class in the
+=PayrollSystem= we get a different error:
+=TypeError: Can't instantiate abstract class Employee with abstract methods calculate_payroll=.
+This tells other developers two things:
+
+1. They cannot instantiate the =Employee= class directly.
+2. The =Employee= class can only be inherited from.
+
+When a class inherits from an abstract class, it should either implement
+its own version of the methods defined in the abstract class or it
+should become an abstract class itself. =Employee= does now conform to
+the interface, but it does not actually implement the
+=calculate_payroll()= method, instead it lets its children implement
+them.
+
+** Implementing the Productivity
+System[[#Implementing-the-Productivity-System][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: Implementing-the-Productivity-System
+   :END:
+
+This program should also be able to track employees productivity. We
+introduce another system: the =ProductivitySystem= that calculates
+productivity based on employee roles. We consider four roles:
+
+1. Managers: they earn a salary.
+2. Secretary: they earn a salary.
+3. Sales people: they have a salary and a commission.
+4. Factory workers: they are paid by the hour.
+
+In the course, the employees classes are moved to a new file called
+=employees.py=, while the =PayrollSystem= is still in the =hr.py= file.
+We add the four new classes to the =employees.py= file. We don't
+redefine =__init__()= which means that we will be implicitly using the
+one from =SalaryEmployee=. When we instantiate from this class, we will
+need to pass an =id=, a =name= and a =weekly_salary=. Instead we will
+implement a =work()= method that indicates the number of hours the
+manager has worked for. We can access =self.name= because we have
+inherited from the parent class. We proceed similarly for the other
+classes.
+
+In [15]:
+
+#+BEGIN_EXAMPLE
+  class Manager(SalaryEmployee):
+      def work(self, hours):
+          print(f'{self.name} screams and yells for {hours} hours.')
+          
+  class Secretary(SalaryEmployee):
+      def work(self, hours):
+          print(f'{self.name} expends {hours} hours doing office paperwork.')
+          
+  class SalesPerson(CommissionEmployee):
+      def work(self, hours):
+          print(f'{self.name} expends {hours} hours on the phone.')
+          
+  class FactoryWorker(HourlyEmployee):
+      def work(self, hours):
+          print(f'{self.name} manufactures gadgets for {hours} hours.')
+#+END_EXAMPLE
+
+In the course, =ProductivitySystem= is implemented in a new file
+=productivity.py=. This class is similar to =PayrollSystem= and
+implements one single method: =track()=.
+
+In [16]:
+
+#+BEGIN_EXAMPLE
+  class ProductivitySystem:
+      def track(self, employees, hours):
+          print('Tracking Employee Productivity')
+          print('==============================')
+          for employee in employees:
+              employee.work(hours)
+          print('')
+#+END_EXAMPLE
+
+We then create instances of these new classes.
+
+In [17]:
+
+#+BEGIN_EXAMPLE
+  manager = Manager(1, 'John Smith', 1500)
+  secretary = Secretary(2, 'Jane Doe', 1200)
+  sales_guy = SalesPerson(3, 'Kevin Bacon', 1000, 250)
+  factory_worker = FactoryWorker(4, 'Pete Peterson', 40, 15)
+
+  employees = [
+      manager,
+      secretary,
+      sales_guy,
+      factory_worker
+  ]
+
+  productivity_system = ProductivitySystem()
+  productivity_system.track(employees, 40)  # 40 hours of work.
+
+  payroll_system = PayrollSystem()
+  payroll_system.calculate_payroll(employees)
+#+END_EXAMPLE
+
+#+BEGIN_EXAMPLE
+  Tracking Employee Productivity
+  ==============================
+  John Smith screams and yells for 40 hours.
+  Jane Doe expends 40 hours doing office paperwork.
+  Kevin Bacon expends 40 hours on the phone.
+  Pete Peterson manufactures gadgets for 40 hours.
+
+  Calculating Payroll
+  ===================
+  Payroll for 1 - John Smith
+  - Check Amount: 1500
+
+  Payroll for 2 - Jane Doe
+  - Check Amount: 1200
+
+  Payroll for 3 - Kevin Bacon
+  - Check Amount: 1250
+
+  Payroll for 4 - Pete Peterson
+  - Check Amount: 600
+#+END_EXAMPLE
+
+The UML diagram shows the new classes, their relationships, and the new
+interface =IWorker=
+
+[[file:fig/iworker.png]]
+
+** Multiple Inheritance[[#Multiple-Inheritance][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: Multiple-Inheritance
+   :END:
+
+Up until now we have implemented class hierarchies where one class
+inherits at most from another class. This is called /single
+inheritance/. Multiple Inheritance allows one class to inherit from
+multiple classes. Let's imagine we want to create a =TemporarySecretary=
+class, that will be treated as a =Secretary= in terms of productivity,
+but will be paid as a =HourlyEmployee=. We could deal with this new
+class using single inheritance, by inheriting from =Secretary= and
+creating our own =calculate_payroll()= method to calculate the payroll
+as in =HourlyEmployee=.
+
+We create a new class that inherits from =Secretary= and
+=HourlyEmployee=, but does nothing else. It will use its parents
+=__init__()= methods.
+
+In [18]:
+
+#+BEGIN_EXAMPLE
+  class TemporarySecretary(Secretary, HourlyEmployee):
+      pass
+#+END_EXAMPLE
+
+If we create an instance of this class, we add it to the list of
+employees, and run the code above, we get an error at the initialization
+stage. Python complains that we have passed 5 arguments but 4 were
+expected. Keep in mind that =self= is always counted in the list of
+arguments. We supplied 4 arguments when we instantiated the object. It
+looks that it's using the =Secretary='s =__init__()= method, that only
+takes =hours=, rather than the =HourlyEmployee='s, that takes two
+arguments.
+
+If we switch the order of inheritance, putting =HourlyEmployee= first,
+it complains that the =weekly_salary= is missing. There is a way to see
+what's going on: the Method Resolution Order (MRO). This is a set of
+rules that defines the search path that Python uses when searching for
+the right method to use in case of inheritance. It's an ordered list of
+classes, and each class has its own MRO. This list of classes is also
+used by the =super()= method.
+
+In [19]:
+
+#+BEGIN_EXAMPLE
+  TemporarySecretary.__mro__
+#+END_EXAMPLE
+
+Out[19]:
+
+#+BEGIN_EXAMPLE
+  (__main__.TemporarySecretary,
+   __main__.Secretary,
+   __main__.SalaryEmployee,
+   __main__.HourlyEmployee,
+   __main__.Employee,
+   object)
+#+END_EXAMPLE
+
+This is the order in which the =__init__()= method, or any other method,
+is searched. As soon as Python finds a method that matches the list of
+arguments passed, i.e., the *signature*, it will call that method. The
+problem is that in this case it is not finding one. Methods are always
+searched
+
+1. Left to right.
+2. Children before parents.
+
+In our case
+
+1. =TemporarySecretary= does not define an =__init__()= method.
+2. Python searches =HourlyEmployee=, which has a matching signature, but
+   the method calls =super()=, so it looks at the parent. A common
+   misconception is that =super()= calls the parent of the current
+   class, in this case =Employee=. The truth is that it searches the
+   next class in the current MRO list.
+3. The next class is =Secretary=, which does not define its own
+   =__init__()= method, so it searches the next class.
+4. The next class is =Employee=. Here the signature of =__init__()=
+   takes 3 arguments (plus =self=), not 4. This is why we get the
+   exception.
+
+To overcome this problem we redefine the =__init__()= method as shown
+below. Instead of =super()= we call the parent class we need for the
+correct initialization.
+
+In [21]:
+
+#+BEGIN_EXAMPLE
+  class TemporarySecretary(Secretary, HourlyEmployee):
+      def __init__(self, id, name, hours_worked, hour_rate):
+          HourlyEmployee.__init__(self, id, name, hours_worked, hour_rate)
+#+END_EXAMPLE
+
+This object will instantiate without problems, but when we try to run
+the =PayrollSystem= this will fail complaining that we haven't provided
+a =weekly_salary=. This happens because =TemporarySecretary= does not
+define its own =calculate_payroll()= method, so Python searches its
+parents. The next class is =SalaryEmployee= which defines one, but which
+requires a =weekly_salary=, and we don't have it here. This can be
+quickly fixed by defining the =calculate_payroll()= method as shown
+below.
+
+In [20]:
+
+#+BEGIN_EXAMPLE
+  class TemporarySecretary(Secretary, HourlyEmployee):
+      def __init__(self, id, name, hours_worked, hour_rate):
+          HourlyEmployee.__init__(self, id, name, hours_worked, hour_rate)
+      
+      def calculate_payroll(self):
+          return HourlyEmployee.calculate_payroll(self)
+#+END_EXAMPLE
+
+*** The Diamond Problem[[#The-Diamond-Problem][¶]]
+    :PROPERTIES:
+    :CUSTOM_ID: The-Diamond-Problem
+    :END:
+
+Now things work as expected. This is an example of the *Diamond
+Problem*, which occurs when a class inherits from two or more classes
+each of which inherits from a single common ancestor. When this happens,
+the MRO is used to search the order in which classes are searched, but
+this can become quite messy, and here we solved it with a patchy
+solution. Whenever you see a Diamond Problem, you should rethink the
+design of your program.
+
+[[file:fig/diamond_problem.png]]
+
+** C3 Superclass Linearization Algorithm
+(Optional)[[#C3-Superclass-Linearization-Algorithm-(Optional)][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: C3-Superclass-Linearization-Algorithm-(Optional)
+   :END:
+
+In Python 3 the algorithm the generates the MRO is called the C3
+Superclass Linearization Algorithm, or C3 for short. Let's assume that
+=TemporarySecretary= inherits first from =Secretary= and the from
+=HourlyEmployee=. Linearization is the process of generating an ordered
+list of classes (the MRO). Each class has its own linearization, and
+this process is recursive. The linearization of the =object= class is
+just itself. In this case we will assume, for simplicity, that the base
+class is =Employee=, rather than =object=. Expressed as an operator the
+linearization of class C is L(C). We will use the initials of the
+classes (E for =Employee=, SE for =SalaryEmployee= and so on), plus the
+/merge/ function. This function operates as follows:
+
+1. It's going to search the first item of the first list in its
+   arguments. This is called the /head/.
+2. It checks whether the first item is the first item of the remaining
+   lists in the arguments. If this is the case, it pulls the argument
+   out and it concatenates it with the list on the very left (outside of
+   the merge function). More precisely:
+
+- =[A] + merge([B], [B]) = [A] + merge([B]) = [A, B]=
+- Given a list =[A]= and two other lists =[B, C]= and =[B]=,
+  =[A] + merge([B, C], [D])=, if B and D are the same, they are
+  extracted and concatenated to the list containing =[A]=, i.e.:
+  =[A] + merge([B, C], [B]) = [A, B] + merge([C])=.
+- When the merge function has a single class as argument, it is
+  concatenated to the list on the left, i.e.,
+  =[A, B] + merge([C]) = [A, B, C]=
+
+[[file:fig/c3_linearization.png]]
+
+** Avoiding the Diamond Problem[[#Avoiding-the-Diamond-Problem][¶]]
+   :PROPERTIES:
+   :CUSTOM_ID: Avoiding-the-Diamond-Problem
+   :END:
+
+We are going to redesign our program so that we don't incur in the
+Diamond Problem. We will (ideally, not in this notebook) create four
+files.
+
+- =program.py=: main program. Instantiates required employees and
+  systems.
+- =hr.py=: contains all the policies for the payrolls (hourly, salary,
+  commission).
+- =productivity.py= contains roles that define how employees are tracked
+  (managers, secretaries etc).
+- =employees.py= will define a class for each employee. Each class will
+  inherit a payroll policy and a role for the productivity system.
+
+The two designs are shown below.
+
+[[file:fig/redesign.png]]
+
+The =Secretary= class now has to child classes: =SalaryPolicy= and
+=SecretaryRole=. The =TemporarySecretary= inherits from =SecretaryRole=
+(check the arrow, it's not the other way around), but also from
+=HourlyPolicy=. We have two interfaces, =IRole= and
+=IPayrollCalculator=. Roles conform to the former and policies to the
+latter. All the code related to one system will live in one file.
+
+This is a /drop-in/ replacement of our modules. This means that after
+modifying our modules, we will /not/ need to modify our main program.
+
+Let's start from =productivity.py=. This file will contain a
+productivity policy for each type of employee. Note that:
+
+1. The new classes do not inherit from anything.
+2. The =work= method now returns a string but does not print it. This
+   means that we must modify the =ProductivitySystem=.
+
+In [7]:
+
+#+BEGIN_EXAMPLE
+  # productivity.py
+
+  class ProductivitySystem:
+      def track(self, employees, hours):
+          print('Tracking Employee Productivity')
+          print('==============================')
+          for employee in employees:
+              result = employee.work(hours)
+              print(f'{employee.name}: {result}')
+          print('')
+      
+  class ManagerRole:
+      def work(self, hours):
+          return f'{self.name} screams and yells for {hours} hours.'
+          
+  class SecretaryRole:
+      def work(self, hours):
+          return f'{self.name} expends {hours} hours doing office paperwork.'
+          
+  class SalesRole:
+      def work(self, hours):
+          return f'{self.name} expends {hours} hours on the phone.'
+          
+  class FactoryRole:
+      def work(self, hours):
+          return f'{self.name} manufactures gadgets for {hours} hours.'
+#+END_EXAMPLE
+
+For the =hr.py= file, we will need some classes, but not modify the
+existing one.
+
+In [11]:
+
+#+BEGIN_EXAMPLE
+  # hr.py
+
+  class PayrollSystem:
+      def calculate_payroll(self, employees):
+          print("Calculating Payroll")
+          print("===================")
+          for employee in employees:
+              print(f'Payroll for {employee.id} - {employee.name}')
+              print(f'- Check Amount: {employee.calculate_payroll()}')
+              print('')
+
+  class SalaryPolicy:
+      def __init__(self, weekly_salary):
+          self.weekly_salary = weekly_salary
+          
+      def calculate_payroll(self):
+          return self.weekly_salary
+      
+  class HourlyPolicy:
+      def __init__(self, hours_worked, hour_rate):
+          self.hours_worked = hours_worked
+          self.hour_rate = hour_rate
+          
+      def calculate_payroll(self):
+          return self.hours_worked * self.hour_rate
+      
+  class CommissionPolicy(SalaryPolicy):
+      def __init__(self, weekly_salary, commission):
+          super().__init__(weekly_salary)
+          self.commission = commission
+          
+      def calculate_payroll(self):
+          fixed = super().calculate_payroll()
+          return fixed + self.commission
+#+END_EXAMPLE
+
+The =employee.py= module will require more extensive changes.
+
+In [14]:
+
+#+BEGIN_EXAMPLE
+  # employee.py
+
+  # from hr import SalaryPolicy, HourlyPolicy, CommissionPolicy,
+  # from productivity import ManagerRole, SecretaryRole, SalesRole, FactoryRole
+
+  class Employee:
+      def __init__(self, id, name):
+          self.id = id
+          self.name = name
+          
+  # The manager is an employee who has a manager role and receives a salary
+  # The work method will be inherited from the ManagerRole
+  class Manager(Employee, ManagerRole, SalaryPolicy):
+      def __init__(self, id, name, weekly_salary):
+          SalaryPolicy.__init__(self, weekly_salary)
+          super().__init__(id, name)  # This comes from Employee
+          
+  class Secretary(Employee, SecretaryRole, SalaryPolicy):
+      def __init__(self, id, name, weekly_salary):
+          SalaryPolicy.__init__(self, weekly_salary)
+          super().__init__(id, name)
+          
+  class SalesPerson(Employee, SalesRole, CommissionPolicy):
+      def __init__(self, id, name, weekly_salary, commission):
+          CommissionPolicy.__init__(self, weekly_salary, commission)
+          super().__init__(id, name)
+          
+  class FactoryWorker(Employee, FactoryRole, HourlyPolicy):
+      def __init__(self, id, name, hours_worked, hour_rate):
+          HourlyPolicy.__init__(self, hours_worked, hour_rate)
+          super().__init__(id, name)
+          
+  class TemporarySecretary(Employee, SecretaryRole, HourlyPolicy):
+      def __init__(self, id, name, hours_worked, hour_rate):
+          HourlyPolicy.__init__(self, hours_worked, hour_rate)
+          super().__init__(id, name)
+#+END_EXAMPLE
+
+Let's verify that the main program runs without modifications.
+
+In [15]:
+
+#+BEGIN_EXAMPLE
+  # program.py
+
+  # from hr import ...
+  # from employee import ...
+  # from productivity import ...
+
+  manager = Manager(1, 'John Smith', 1500)
+  secretary = Secretary(2, 'Jane Doe', 1200)
+  sales_guy = SalesPerson(3, 'Kevin Bacon', 1000, 250)
+  factory_worker = FactoryWorker(4, 'Pete Peterson', 40, 15)
+  temporary_secretary = TemporarySecretary(5, 'Dolly Parton', 40, 9)
+
+  employees = [
+      manager,
+      secretary,
+      sales_guy,
+      factory_worker,
+      temporary_secretary
+  ]
+
+  productivity_system = ProductivitySystem()
+  productivity_system.track(employees, 40)  # 40 hours of work.
+
+  payroll_system = PayrollSystem()
+  payroll_system.calculate_payroll(employees)
+#+END_EXAMPLE
+
+#+BEGIN_EXAMPLE
+  Tracking Employee Productivity
+  ==============================
+  John Smith: John Smith screams and yells for 40 hours.
+  Jane Doe: Jane Doe expends 40 hours doing office paperwork.
+  Kevin Bacon: Kevin Bacon expends 40 hours on the phone.
+  Pete Peterson: Pete Peterson manufactures gadgets for 40 hours.
+  Dolly Parton: Dolly Parton expends 40 hours doing office paperwork.
+
+  Calculating Payroll
+  ===================
+  Payroll for 1 - John Smith
+  - Check Amount: 1500
+
+  Payroll for 2 - Jane Doe
+  - Check Amount: 1200
+
+  Payroll for 3 - Kevin Bacon
+  - Check Amount: 1250
+
+  Payroll for 4 - Pete Peterson
+  - Check Amount: 600
+
+  Payroll for 5 - Dolly Parton
+  - Check Amount: 360
+#+END_EXAMPLE
+
+With these modification it is now easy to add roles and policies without
+running into the Diamond Problem or checking the MRO.
