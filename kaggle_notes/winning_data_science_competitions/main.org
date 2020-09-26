@@ -1,0 +1,3316 @@
+* Winning Data Science Competitions
+
+* Week 1
+** Course outline
+
++ Week 1
+  - Intro to competitions. Recap of main ML methods.
+  - Feature preprocessing and extraction.
++ Week 2
+  - EDA. Ways to build intuition about the data with logic and visualization.
+  - Validation. Different strategies.
+  - Data leaks and Leaderboard Probing.
++ Week 3
+  - Metrics for regression and classification.
+  - Mean-encodings, how they overfit and how to compensate.
++ Week 4
+  - Advanced features.
+  - Hyperparameter optimization.
+  - Ensembles with Kazanova.
+  - Practical guide and advice.
++ Week 5
+  - Final project.
+  - Analysis of winning solutions.
+
+There are three types of assignments in this course: quizzes, programming assignments and the final competition. The competition is the most important part, and you are supposed to start working on it from week two. For the programming assignments, you can download the notebooks and run them locally.
+
+** Competition Mechanics
+
+Competitions can be very diverse, but they all have the same common elements:
+
+- Data :: It usually comes with a description. It's useful to read it. Depending on the competition you can use other external data sources.
+- Model :: Something that transforms data into answers. It must be accurate and reproducible.
+- Submission :: usually you have to send just the predictions. Often there is a sample submission to see which format.
+- Evaluation :: you need to know how good your model is, e.g. accuracy. The description of the competition always specify the metric used.
+- Leaderboard :: rating of the performance of all participating teams. This score can provide information about the dataset.
+
+[[file:fig/leaderboard.png][leaderboard]]
+
+The mechanics of a competition is summarized in the figure below
+
+[[file:fig/mechanics.png][competition mechanics.]]
+
+Usually you can select to submissions for your final evaluation. Be careful, as public leaderboards can be misleading. The competition rules usually specify not only if you can use external data, but also the maximum number of daily submissions.
+
+The description of the train/test split is very important to set up the correct validation scheme.
+
+Kernels are like small virtual machines that yu can use to share code with other participants. You can comment and even fork other people's notebooks.
+
+Not all competitions contribute points and tiers. There is a description of the tier method, and how scores are computed.
+
+** Difference between real life and competitions
+
+Real world ML problems are complicated and require many steps. 
+
+- Understand the business problem :: what do you want to do? For what? How does it help your customers?
+- Problem formalization :: define the entities in your problem. Express it in an unambiguous way.
+- Data collection :: what data can you use? How difficult or expensive is collecting it?
+- Data preprocessing :: all data need to be cleaned.
+- Moedelling :: which class of models is adequate for this problem?
+- Evaluation in real life :: you must evaluate the model in the real-world scenario, to avoid biases.
+- Deploy the model :: make it available to users.
+- Monitor the model :: retrain on new data.
+
+In competitions the scenario is simpler. The difference between real life and competitions is summarized in the figure below. Data collection and model complexity have both Y and N in competitions, because in some of them you have to take care of these things, while in others you don't.
+
+[[file:comparison.png][comparison of real-life problems and competitions]]
+
+*** Competition philosophy
+
+Competitions are not about algorithms, you need much more than that to win one. Everyone can and will tune classical (and not so classical) approaches. In order to win, you need insights in the data. Don't limit yourself. The only thing you should care about is the target metric. Feel free to use complex solutions, advanced feature engineering, huge calculations, heuristics, manual data analysis and so on. Be creative: you should know the main ML models, but it is OK to modify or hack them, or even come up with something completely new. Don't be dogmatic, that won't take you anywhere. Read the source code and change it.
+
+* Week 1: Feature preprocessing and generation
+  :PROPERTIES:
+  :CUSTOM_ID: sec:org9f778fe
+  :END:
+
+** Numeric Features
+   :PROPERTIES:
+   :CUSTOM_ID: sec:NumericFeatures
+   :END:
+
+For simplicity, we will divide methods in tree-based and non tree-based.
+For example, decision trees try to find the most useful split for each
+feature, and the decision does not change if we multiply each feature by
+a constant. Conversely, three families of methods that are sensitive to
+feature scaling are:
+
+1. Linear models.
+
+2. kNN methods.
+
+3. Neural Networks.
+
+Consider the simple example shown in Fig. [[#fig:Scaling][1]], where
+class 1 is represented by a circle and class 0 by a cross, with one
+point of unknown class shown as "?". If we multiply feature x1 by zero,
+this feature will be ignored altogether. If we multiply it by 1e6, small
+differences will have large impacts, which kNN is very sensitive to.
+
+#+CAPTION: Effect of feature scaling.
+[[file:Scaling.jpg]]
+
+In linear models we want to apply regularization to different features
+in similar amounts, but the impact of regularization is proportional to
+feature scale, this is why we scale features before regularizing.
+Gradient based methods can also go crazy without proper scaling. The
+simplest way is to bring features to the same scale by setting the
+minimum to zero and the maximum to one, for example by using
+=sklearn.preprocessing.MinMaxScaler=. The difference between
+=MinMaxScaler= and =StandardScaler= is that the former subtracts the
+mean and divides by the range, while the latter subtracts the mean and
+divides by the standard deviation. One interesting idea is that, since
+kNN is sensitive to the scale of the features, we can play with the
+scale in order to make features that we consider important more relevant
+for kNN. With linear models we must also pay attention to outliers. To
+protect linear models from outliers, we *can clip the features* values
+between a lower bound and an upper bound, for example 1st and 99th
+percentiles. This technique is known in finance as *winsorization*. This
+can be useful, for example, if missing values have been encoded as -999
+but the range of feature values is between, say, 0 and 100.
+
+** Rank Transformation
+   :PROPERTIES:
+   :CUSTOM_ID: sec:RankTransformation
+   :END:
+
+Rank transformations can be a better option than min-max scaler if there
+are outliers, and we have no time to handle them manually. Ranking can
+be performed by using =scipy.stats.rankdata=. To apply ranking to test
+data we can do two things:
+
+1. Store the mapping from values to rank obtained in the training set
+   and map it to the test set.
+
+2. Concatenate training and test data, apply the rank there, and then
+   split.
+
+Another couple of transformations that can help non tree-based models
+are:
+
+1. Log tranformation: =np.log(1 + x)=
+
+2. Raising to a power < 1: =np.sqrt(x + 2/3)=
+
+Both transformation make large values a bit closer to the bulk of the
+data, and values close to zero more distinguishable.
+
+It is sometimes beneficial to train a model on concatenated data frames
+obtained through different pre-processings, or to mix models trained on
+differently pre-processed data. Linear models, kNNs and Neural Networks
+can greatly benefit from this.
+
+** Feature Generation
+   :PROPERTIES:
+   :CUSTOM_ID: sec:FeatureGeneration
+   :END:
+
+Sometimes we can engineer features based on prior knowledge, in other
+cases we can extract them from EDA. Simple example of the former class
+is, given surface area and price of an apartment, to extract the price
+per square meter. Another example is, given features x1 and x2, where x1
+is the horizontal distance from a water source, and x2 is the vertical
+elevation w.r.t. the water source, we can compute:
+
+#+BEGIN_EXAMPLE
+  d = (horiz\_dist ** 2 + elevation ** 2) ** 0.5
+#+END_EXAMPLE
+
+*Important point*: explicitly adding features based on multiplications,
+divisions and similar can be of use not only for linear models, but also
+for Gradient Boosting Decision Trees, which, despite being a very
+powerful model, experience difficulties with the approximation of
+multiplications and divisions. Adding these features explicitly, can
+lead to a more robust model, with fewer trees.
+
+Another interesting example of generated feature is the *fractional
+part* of an amount, for example a price. This feature can help the model
+utilize the difference in people's perception of these prices.
+Similarly, if we want to tell whether a financial transaction is
+performed by a human or by a robot, this feature can be useful, as
+humans tend to set round prices. Same to find spam-bots: humans don't
+tweet always at the same precise interval. Summarizing:
+
+1. The impact of different pre-processing is different for different
+   models, especially between tree and non-tree models.
+
+2. Tree-based models don't depend on scaling.
+
+3. Non tree-based models depend hugely on scaling.
+
+4. Most commonly used pre-processings are:
+
+   - =MinMaxScaler=.
+
+   - =StandardScaler=.
+
+   - Rank.
+
+   - =np.log(1 + x)= and =np.sqrt(1 + x)=.
+
+5. Feature generation is powered by:
+
+   - Prior knowledge.
+
+   - Exploratory Data Analysis.
+
+** Categorical and Ordinal Features
+   :PROPERTIES:
+   :CUSTOM_ID: sec:CategoricalAndOrdinalFeatures
+   :END:
+
+Let's consider the Titanic data-set, and in particular the features:
+=Pclass=, =Sex=, =Cabin= and =Embarked=. The simplest way to encode
+categorical variables is to map its unique labels to numeric values.
+This is called *label encoding*. This method works fine with trees. Non
+tree-based models, however cannot take advantage of this, and we need to
+represent categorical variables differently. Let's consider the case in
+the table:
+
+| Pclass | Target |
+|--------+--------|
+| 1      | 0      |
+| 2      | 1      |
+| 3      | 0      |
+
+In this case the relationship between X and Y is not linear, and a
+linear model will estimate values of y close to 0.5, more precisely:
+
+| Pclass | Target | Prediction |
+|--------+--------+------------|
+| 1      | 0      | 0.4        |
+| 2      | 1      | 0.5        |
+| 3      | 0      | 0.6        |
+|        |        |            |
+
+A decision tee doesn't have this problem, and will perform much better.
+We can apply label encoding either in alphabetical order or in order of
+appearance: for the former we can use =sklearn.LabelEncoder= while for
+the latter we can use =pandas.factorize=.
+
+*** Frequency Encoding
+    :PROPERTIES:
+    :CUSTOM_ID: sec:FrequencyEncoding
+    :END:
+
+This type of transformation will retain some information about the
+feature distribution, and can be of help for both tree and non
+tree-based methods. In the case of tree-based methods, the benefit is a
+lower number of splits. Multiple categories with the same frequency are
+not distinguishable, and we will have ties. We may apply a rank
+operation here, in order to deal with such ties.
+
+To adapt categorical variables for non-tree methods use
+*one-hot-encoding*. Note however that if we have few numerical features
+and a lot of one-hot encoded features, tree methods may have
+difficulties in using the former efficiently, and they will generally
+slow down, not always improving their results. If we have a large number
+of one-hot encoded features, we should use sparse matrices.
+
+** Feature Generation
+   :PROPERTIES:
+   :CUSTOM_ID: sec:FeatureGeneration
+   :END:
+
+Feature generation is one of the most important activities, and can make
+all the difference in a competition. A useful example is creating
+interactions of existing features, e.g. interaction of class and and sex
+in Titanic. This is more useful for non-tree models, like LMs and KNNs,
+as tree model are good at identifying useful interactions automatically.
+Summarizing:
+
+1. Values in ordinal features are naturally sorted in some meaningful
+   way.
+
+2. Label encoding maps categories to numbers.
+
+3. Frequency encoding maps categories to their frequencies.
+
+4. Label and frequency encodings are often used for tree based models.
+
+5. One-hot encoding is often used for non-tree-based models.
+
+6. Interactions of categorical features can help linear models and KNN.
+
+** Date-time and coordinates
+   :PROPERTIES:
+   :CUSTOM_ID: sec:DataTimeAndCoords
+   :END:
+
+*** Feature generation for date-time features
+    :PROPERTIES:
+    :CUSTOM_ID: sec:DateTime
+    :END:
+
+They both differ from numeric features. Features generated from date and
+time can be divided into three broad categories:
+
+1. Time moments in a period, e.g. day of the week, month, season, year,
+   second, minute, hour etc.
+
+2. Time past since a particular event. The event can be row-dependent or
+   row-independent. The first one can be time lapsed since a particular
+   date. The second one can be number of days left until next holiday or
+   passed since last holiday. Number of days since to last/next sales
+   campaigns is another example.
+
+3. Difference between dates.
+
+We can often obtain useful features by taking the difference of two
+dates. In churn prediction, for example, we can obtain a useful feature
+taking the difference between the registration date and the date of the
+last purchase or the date of the last call to the customer service. We
+can thus create a =date_diff= feature (number of days).
+
+*** Feature generation for coordinates
+    :PROPERTIES:
+    :CUSTOM_ID: sec:Coordinates
+    :END:
+
+Useful features can be the distances to/from important points on a map.
+Examples are the distance from the nearest shopping center, hospital,
+school etc. Another possibility is to divide the of squares, and for
+each square, find the most expensive building and, within each square,
+compute the distance of each object of interest from this building.
+Alternatively, one can *cluster objects* and compute distances from the
+centers of the clusters. One can also find special ares (historical
+areas etc.) and compute distances from those. Note that these important
+areas may come from external data, and not necessarily from the
+training/test data.
+
+Another useful approach is to use *aggregated statistics*, for example,
+number of building in an area, which can be used as a proxy to
+population density / popularity, or mean prices per square meter, which
+tells how expensive the area is.
+
+*Cool trick*: when using decision trees, you can use slightly rotated
+coordinates as new features. This allows making more precise decision on
+the map. One can use a number of rotations. Let's say that there is a
+road dividing an are into a high cost and a lower cost sub-areas. If the
+street is slightly rotated, the tree will try to make a lot of splits.
+If, however, we can add new coordinate (the rotated ones), one of the
+rotations may make the split much easier.
+
+** Missing Values
+   :PROPERTIES:
+   :CUSTOM_ID: sec:MissingValues
+   :END:
+
+There are many different ways of encoding missing values. How can we
+find whether a numeric value is used to encode missing values? We can
+plot histograms and density plots. If a density plot as a clear spike
+around a value, that value may have been used to encode missing values.
+In a histogram, we may find an outlying peak. Fig. [[#fig:HiddenNAs][2]]
+shows an example.
+
+#+CAPTION: HiddenNAs
+[[file:HiddenNas.jpg]]
+
+*** Handling Missing Values
+    :PROPERTIES:
+    :CUSTOM_ID: sec:HanlingNAs
+    :END:
+
+There are three main approaches to handling missing values:
+
+1. Replace the missing value with a numeric values outside the value
+   range.
+
+2. Replace with the mean or the median.
+
+3. Try to reconstruct the value.
+
+The first method allows tree methods to put missing values in separate
+categories. This however is not a good idea for linear models and neural
+networks. The second approach is better for these. Another approach is
+to create a logical value =isnull= that says whether the value is
+missing or not. This can solve problems with trees and Neural Networks,
+but it implies doubling the number of columns. Reconstructing missing
+values is the most complex among the three approaches. If we have
+missing values in, say, a time series data, imputation may work, but
+when the rows of our data-set are independent, it can be very difficult
+to find a logic for the reconstruction.
+
+One *very important point* is that if we replace missing values with
+other values, we should do this before feature generation. In the
+example we consider two features: day-time and temperature, where the
+latter has some missing values. We can impute the missing values as the
+median temperature, but if we now add a new feature, say, the
+temperature difference between two consecutive days, this difference can
+be large and misleading when one value is missing and imputed, while the
+other is not. Fig. [[#fig:NAandFeatureGen][3]] shows this scenario. We
+could approximate the temperature, treating it as a time-series, by
+interpolating nearby points, but things are not always this clear.
+
+#+CAPTION: Illustration of the importance of replacing missing values
+before generating new features.
+[[file:NAandFeatureGen.jpg]]
+
+Another problem is when we replace missing values with either =NaN= or,
+say, 999. Imagine we want to encode a categorical variable with the mean
+value of a numeric variable within the category. If there are =NaN= or
+large values, the mean will be pushed towards them. The correct way to
+deal with this scenario is to *ignore missing values when calculating
+the mean*, median, or whatever we use to impute the missing values. The
+common idea in these two examples is that we should pay special
+attention to missing value imputation when generating new features.
+
+Note that XGBoost can handle =NaN=, and sometimes using this approach
+can change scores drastically. Sometimes we can treat outliers as
+missing values.
+
+Another interesting idea is the following: imagine we have categorical
+data, and *some categories appear in the test data but not in the
+training data*. We can set such categories as missing values. The
+rationale is that the model that didn't have that category in the
+training data, will treat it randomly. Here, *unsupervised encodings* of
+categorical features can be of help. We can change categories to their
+frequencies, and replace categories we have never seen before with their
+frequencies in the test set. In the example we have four categories: A,
+B, C, D. We count the number of occurrences in /both/ the training and
+the test set. In our example we have, for the training set:
+
+| categ$_{\text{feature}}$ | categ$_{\text{encoded}}$ | target |
+|--------------------------+--------------------------+--------|
+| A                        | 6                        | 0      |
+| A                        | 6                        | 1      |
+| A                        | 6                        | 1      |
+| A                        | 6                        | 1      |
+| B                        | 3                        | 0      |
+| B                        | 3                        | 0      |
+| D                        | 1                        | 1      |
+
+and for the test set:
+
+| categ$_{\text{feature}}$ | categ$_{\text{encoded}}$ | target |
+|--------------------------+--------------------------+--------|
+| A                        | 6                        | ?      |
+| A                        | 6                        | ?      |
+| B                        | 3                        | ?      |
+| C                        | 1                        | ?      |
+
+Category D appears only in the training set, while category C appears
+only in the test set. They, however, have the same frequency, and if
+there is any association between frequency and targets, this will be
+captured. Summarizing:
+
+1. The choice of the method to fill =NaN= depends on the situation.
+
+2. The typical way to deal with missing values is to replace them with
+   the mean or the median, but especially for tree methods, it is
+   convenient to replace them with values outside of the value range.
+
+3. Missing values may have already been replaced by the organizers.
+
+4. The model can be improved by adding a =isnull= column, containing
+   =True= =False= to indicate whether a feature contains missing values.
+
+5. Avoid filling missing values before generating new features.
+
+6. XGBoost can handle =NaN=.
+
+** Feature Extraction from Words and Images
+   :PROPERTIES:
+   :CUSTOM_ID: sec:WordsAndImages
+   :END:
+
+In the Allen AI2 competition, some people used search engines to deal
+with the text data. If text or images are the only types of data, one
+can use specialized methods, but if we have text and images as
+additional features,we must craft additional features and add them as
+complementary. For example, in the Titanic data-set we have the
+passenger name, and we need to generate some features to make use of
+them. Similarly, in the AVITO duplicate ads detection competition, some
+textual ads were duplicates of each other, with minor modifications, but
+there were also images that could be used to disambiguate. In the
+TradeShift challenge, the goal was to classify documents. In such cases,
+we may want to extract features from text and add them to the others, or
+even to use text-specific features alone in some models, and then stack
+such models with others.
+
+There are two main ways to extract features from text: bag-of-words and
+embeddings.
+
+1. Bag of Words [sec:orgac68ce1] We create a column for each word, and
+   for each input sentence/text we count the number of occurrences of
+   that word. One way to do this is by
+   =sklearn.feature_extraction.text.CountVectorizer=. We may need to do
+   some post-processing here, like scaling. This has the double goal of
+   making samples more comparable and, on the other hand, to boost the
+   importance of relevant features while reducing the impact of
+   irrelevant ones. One way to make these features comparable is to
+   normalize by the text frequency using *TFiDF*.
+
+   Term Frequency: we normalize by the total number of occurrences in a
+   row, therefore we measure the relative, rather than the absolute
+   frequency. Text of different sizes will become more comparable.
+
+   #+BEGIN_EXAMPLE
+     tf = 1 / x.sum(axis=1)[:, None]
+     x *= tf
+   #+END_EXAMPLE
+
+   Inverse Document Frequency: here we normalize column-wise by the
+   inverse frequency of the word. This will reduce the importance of
+   very frequent words.
+
+   #+BEGIN_EXAMPLE
+     idf = np.log(x.shape[0] / (x > 0).sum(axis=0))
+     x *= idf
+   #+END_EXAMPLE
+
+   Scikit-Learn has an implementation of TfIDF in\\
+   =sklearn.feature_extraction.text.TfidfVectorizer=.\\
+   There are many variants of TfIDF that can work better than the
+   default ones, in certain circumstances.
+
+2. N-grams [sec:orgbc05d2e] The idea is adding not only columns
+   corresponding to individual words, but also to groups of N
+   consecutive words. Same idea can be applied to characters rather than
+   words. It can sometimes be cheaper to have every possible char-N-gram
+   rather than an entry for each individual word. Character N-grams also
+   help models to deals with unseen words and unusual/rare forms of
+   known words. In Scikit-Learn's =CountVectorizer= the parameter
+   =Ngram_range= defines the size of N, while the argument =analyzer=
+   allows to switch from word to character N-grams.
+
+   Usually we need to pre-process text before applying BoW. Typical
+   steps are:
+
+   1. Conversion to lowercase. =CountVectorizer= does it by default.
+
+   2. Lemmatization. Example: democracy, democratic, democratization ->
+      democracy.
+
+   3. Stemming. Example: democracy, democratic, democratization ->
+      democr
+
+   4. Managing stopwords. Article, prepositions, very common words.
+
+   Lemmatization is more "careful" than stemming. =CountVectorizer= has
+   a parameter related to stopwords, called =max_df=. This is the
+   frequency threshold above which a word will be removed from the
+   corpus. In conclusion:
+
+   1. We first need to pre-process our text with lowercase conversion,
+      stemming, lemmatization, stopwords removal etc.
+
+   2. We can then use N-grams to take advantage of local context, at the
+      word or character level.
+
+   3. Post-process with TfIDF
+
+*** Word2vec and CNNs
+    :PROPERTIES:
+    :CUSTOM_ID: sec:orge309edf
+    :END:
+
+1. Word2vec [sec:org1bb1085] Word2vec converts each word into vectors
+   using information from nearby words. There are several
+   implementations of these embeddings:
+
+   - For words :: word2vec, GloVe, FastText, etc.
+
+   - For sentences :: Sum or mean of the embeddings of the words
+     appearing in the document or more specialize approaches like
+     doc2vec. The advice is to try all these approaches and see which
+     one works best.
+
+   All the pre-processing discussed above should be applied before
+   extracting these embeddings. Let's summarize the main differences
+   between BoW and word2vec in the context of a competition. In BoW, we
+   usually have very large vectors, but their meaning is known. In
+   word2vec we have relatively small vectors, but their meaning can be
+   interpreted only in some cases. Words with similar meaning will have
+   similar vector representations, and this can be of great help. In
+   general, BoW and w2v can produce quite different results, and these
+   can be brought together in the final solution.
+
+2. CNNs [sec:org2b5e324] CNNs provide compressed representations of
+   images. The various layers are referred to as /descriptors/ with
+   later (closer to the output) descriptors being closer to the goal of
+   the model, and earlier ones being more basic.
+
+   Fine-tuning a pre-trained network is usually better than training
+   from scratch when the data-set is small. Example from the "online
+   stage of the Data Science Game 2016". The goal was to classify photos
+   of roofs into one of four categories. Competitors had 8000 images and
+   pre-trained models and augmenation were crucial.
+
+   Important final note: if you want to fine-tune a pre-trained model,
+   or train one from scratch, you will usually need to use labels from
+   the training set, so be careful with the validation set and do not
+   overfit. Summarizing:
+
+   1. When working with text you need:
+
+      - preprocessing (lowercase, stemming, lemmatization, stopwords).
+
+      - BoW produces huge vectors
+
+      - N=grams can help to use local context
+
+      - TfIDF can be used as post-processing
+
+      - Word2vec produces smaller vectors
+
+      - Can use pre-trained models
+
+   2. When working with images
+
+      - Features can be extracted from different layers
+
+      - Careful choice of pre-trained network can help
+
+      - Fine-tuning allows to refine pre-trained models
+
+      - Data augmentation can improve the model
+
+** Week 2: Exploratory Data Analysis
+   :PROPERTIES:
+   :CUSTOM_ID: sec:org7665f46
+   :END:
+
+*** Exploratory data analysis
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org42b078a
+    :END:
+
+In this part we will see:
+
+1. What EDA is, what and why.
+
+2. Things to explore.
+
+3. Exploration and visualization tools.
+
+4. Simple example of data-set cleaning.
+
+5. Kaggle competition EDA.
+
+EDA allows to better understand the data. Data understanding is required
+to build an intuition about the data, generate hypotheses about new
+features and find insights in the data. Winning solutions almost always
+exploit such insights. Exceptions can be when data are anonymized.
+Visualizations are the most powerful tool. We may come up with a
+hypothesis and verify it via visualizations.
+
+1. Motivating example [sec:org15a794a] Alexander D'Yakonov participated
+   in a competition where the goal was to predict whether a customer
+   would use a promo he/she received or not. Two of the available
+   columns were =# promos sent= and =# promos used=, i.e. the number of
+   promos the customer had received and the number he had used. The
+   difference between these two columns is remarkably close to the
+   values in the =used this promo?= column, which we want to predict,
+   and that was encoded as a binary variable. Just exploiting this fact,
+   it is possible to get 80% accuracy. This is an example of *data
+   leaks*, which we will cover more extensively later.
+
+   Summarizing: With EDA we can
+
+   - Get comfortable with the data.
+
+   - Find /magic/ features.
+
+   As a general rule, always do EDA first, don't jump straight into
+   modeling.
+
+*** Building intuition about the data
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org0e90e54
+    :END:
+
+The goals of this sections are:
+
+1. Getting domain knowledge.
+
+2. Checking if the data are intuitive.
+
+3. Understanding how the data was generated.
+
+1. Getting domain knowledge [sec:orgad03c6a]
+
+   Kaggle competitions are very diverse, and may cover topics we know
+   nothing about. The first task should therefore consists of looking
+   for articles on the subject, reading Wikipedia, googling around, and
+   more in general gaining some basic knowledge on the subject matter.
+
+   For example, let's say that we have a competition where the goal is
+   predicting advertisers costs. We then need first to familiarize with
+   web advertisement. We may find that the data were exported from
+   Google's advertisement system (AdWords), and after reading a bit
+   about it, we can learn about the meaning of the (initially obscure)
+   column names. We may learn that the =Impression= column is the number
+   of times an ad was presented to the user, while =Clicks= is the
+   number of time the users clicked on the ad. This allows for a first
+   check, as the former should always be larger than or equal to the
+   latter.
+
+   We then need to check whether the data agree with our intuition and
+   domain knowledge. In the example shown in this lesson, one entry for
+   the =Age= column equals 336. This is clearly wrong, and it may be 33
+   or 36 or something else. In such case we can manually correct the
+   entry. In other cases it's not clear, for example if =Impressions=
+   equals 0 and =Clicks= equals 3. In some cases this type of errors may
+   be due to the data export system or some other systematic source, and
+   could be exploited to get a better score. In the case above, we may
+   introduce a logical column =is_incorrect= which may help the model
+   leverage such cases, in case they are not completely at random.
+
+   It is also very important to understand how the data were generated,
+   e.g. how the data were sampled from the database. Maybe they were
+   sampled at random, or they may have over-sampled one class, to make
+   the data-set more balanced. Only if you know how the data was
+   generated you can set up a proper validation scheme. We may find out
+   that the training set and the test set were generated with different
+   algorithms, in which case we couldn't use part of the training set as
+   our validation set, as it will not be representative of the test set.
+   In the ad competition described above this seemed to be the case:
+   improving the model on the validation set did not improve the results
+   on the leaderboard, and the leaderboard scores were unexpectedly
+   higher than the validation score. Moreover, when plotting
+   scatterplots for particular pairs of features, the plots were
+   completely different for the training set and the test set. Finally,
+   another suspicious clue was that, although the number of days in the
+   training set was larger than the number of days in the test set, the
+   number of rows of the training set was smaller than the number of
+   rows in the test set. The solution of the puzzle was found in a
+   scatterplot of two features, and this allowed adjusting the scores so
+   that they would match between training set and leaderboard. A more
+   detailed description of this analysis can be found in
+   [[https://rkgvomccnsyllhtvgnvjco.coursera-apps.org/notebooks/readonly/reading_materials/EDA_video2.ipynb][this
+   notebook]].
+
+   1. Brief overview of the notebook [sec:org8f47b2e]
+
+      The data-set contains information on online advertisement from
+      Google. The training set covers many more days that the test set,
+      but has fewer rows. When counting the number of entries per day
+      (only 14 days covered) in the test set, they find that each day
+      has the same number of entries, 639,360, and hypothesize that this
+      is due to a loop over some id. There is no single column with that
+      number of unique entries, therefore it must be a composite key.
+      They finally find that a combination of =KeywordId=, =AdGroupId=,
+      =Device= and =Slot= provides the right number. They therefore
+      create a primary key from these fields. They then compute
+      =date_diff= as the difference between the current entry date and
+      the first entry (separately for the training and the test set) and
+      for each unique primary key, they compute the mean =date_diff= and
+      the number of entries (group size). More precisely, for the
+      training set:
+
+      #+BEGIN_EXAMPLE
+        train['date_diff'] =  (train.Date - train.Date.min()).dt.days
+        g = train.groupby(['KeywordId', 'AdGroupId', 'Device', 'Slot'])
+        plt.scatter(g.date_diff.mean(), g.size(), edgecolor = 'none',
+                    alpha = 0.2, s=20, c='b')
+      #+END_EXAMPLE
+
+      This plot produces a triangular shape (see notebook). The same
+      plot for the test set produces a single dot with coordinates (6.5,
+      14). These are the same for each group, which is to be expected,
+      as each group has the same number of entries in the test set. Each
+      group has a size of 14 (visible from the plot), and the mean date
+      is the mean of (0, 1, 2, ..., 13), which is 6.5. In the training
+      set each group has a different number of entries. Some have almost
+      zero, some have as many entries as are days in the training set.
+
+      *CONTINUE EXPLANATION HERE*
+
+      Summarizing:
+
+      - Getting domain knowledge helps to get a deeper understanding of
+        the problem.
+
+      - Checking whether the data are intuitive and agree with our
+        domain knowledge is crucial.
+
+      - Understanding how the data was generated is crucial to set up a
+        proper validation, and can help solve enigmatic cases like the
+        one described above.
+
+*** Exploring anonymized data
+    :PROPERTIES:
+    :CUSTOM_ID: sec:orgbf08353
+    :END:
+
+In anonymized data some entries are replaced with hash values. This
+wouldn't change how a bag-of-words model would work, but makes the
+interpretation harder. In some cases the column names are uninformative
+too. There are several things one could try:
+
+1. De-anonymize the columns (legally, of course...) and guess the
+   meaning of the features.
+
+2. Guess the types of the columns. This is easier, and almost always
+   possible.
+
+3. Explore relationships between features.
+
+4. Find whether the features grouped in some way.
+
+1. Example based on a local competition [sec:org13e06fd]
+
+   In this examples all fields are anonymized, and we don't know what
+   the columns mean, or what we need to predict. It's a multi-class
+   problem (4 labels). They start with a simple baseline by filling NAs
+   with -999 and encoding all the categorical features with label
+   encoding. They then run a Random Forest with no fine tuning. They
+   plot feature importance and find that feature =x8= has a particularly
+   high relevance. Looking at the mean and std. dev for this feature, it
+   looks like it has been standardized, as the mean is close to 0 and
+   the std. dev is close to 1. They are not exactly equal to 0 and 1,
+   probably because the normalization was performed before splitting
+   into training and test set. We don't know the mean and sigma. Looking
+   at the =value_counts= for this feature, we see that some were
+   repeated thousands times. We can try to reconstruct the original
+   values by taking the unique values and sorting them. We can then take
+   the difference between consecutive numbers and we find that the
+   difference between two consecutive features is very often the same
+   value. We can then divide these differences by this value, and we
+   will have (obviously) many values very close to 1. We can then divide
+   our features by this value. Next we notice that positive values tend
+   to have the same fractional part and negative values have the same
+   (but a different one) fractional part. If we subtract this fractional
+   part the values now look like integers. We can round the numbers, and
+   now we have positive and negative rounded numbers. If we take feature
+   =x8= and print value counts, by scrolling down we find a value
+   -1968.0. Someone probably entered zero in a birth-date field. After
+   shifting we have some very reasonable entries. One of the most
+   frequent is 1899, which is probably what the system automatically
+   enters in the system. Other frequent entries are 999, which probably
+   is something humans entry when they don't want to entry anything
+   meaningful.
+
+   All the details of this analysis can be found in
+   [[https://rkgvomccnsyllhtvgnvjco.coursera-apps.org/notebooks/readonly/reading_materials/EDA_video3_screencast.ipynb][this
+   notebook]].
+
+   Some useful functions we can use for our explorations are:
+
+   #+BEGIN_EXAMPLE
+     df.dtypes
+     df.info()
+     x.value_counts()
+     x.isnull()
+   #+END_EXAMPLE
+
+   =df.dtypes= can return =object=, and this is the trickiest type, as
+   it could be anything, including numeric features with missing values.
+
+   Summarizing: there are two things we can do with anonymized features:
+
+   1. Try to decode the features.
+
+      - Guess the true meaning of the feature.
+
+   2. Guess the feature types.
+
+      - Each type needs its own pre-processing.
+
+*** Visualizations
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org0c0269a
+    :END:
+
+We will cover various visualizations to:
+
+- Explore individual features :: 
+
+  - Histograms
+
+  - Plots
+
+  - Statistics
+
+- Explore relationships between features :: 
+
+  - Scatter plots
+
+  - Correlation plots
+
+  - index vs feature statistics plots
+
+There is no recipe for EDA. You need to look into the data, and if you
+find something interesting, look deeper into it.
+
+Histograms can be misleading and it is usually a good idea to change the
+bin size. It is also not possible to tell whether values are repeated or
+just close to each other. Switching to the log scale is useful in such
+cases. One nice example is the case where the histogram shows a big peak
+around zero, but the density plot on the log scale shows that there is a
+peak in a value that turns to be the average value of the data once we
+remove the values in the peak. Probably missing values were imputed with
+the average, and this is why we see this peak. How can we use this
+information? We may replace these average values with
+=NaN=s, as XGBoost has a special method to deal with =NaN=s. We can otherwise fill the missing values with -999 or other values out of the feature range, or we can use a binary feature =is_missing=,
+which would be useful, for example, when using linear models.
+
+We can plot the row index on the x axis and the feature values on the y
+axis. If we see horizontal stripes, this indicates constant values
+across the dataset. Randomness over the indices, i.e., the absence of
+vertical stripes, suggests that the dataset is properly shuffled. It is
+sometimes useful to color-code points according to the label. This is
+useful to see whether data points have been properly shuffled. Feature
+statistics can be useful as well. There are useful functions for this
+purpose, like:
+
+#+BEGIN_EXAMPLE
+  df.describe()
+  x.mean()
+  x.var()
+#+END_EXAMPLE
+
+Also very useful are functions to count unique values or null values.
+
+#+BEGIN_EXAMPLE
+  x.value_counts()
+  x.isnull()
+#+END_EXAMPLE
+
+The simplest visualization of feature relations is a scatterplot of two
+features. Again, coloring by class label can be useful. Scatterplots are
+useful to check whether the distribution of the values in the training
+and in the test set are the same. In the example, two features are
+plotted, and although the dots overlap to a large extent, there are some
+points that have larger values for both features and that are found only
+in the test set.
+
+If you see a clear discrepancy between points in the training/validation
+and in the test set you should double check. It may just be a bug in the
+code, or it may be a completely overfitted feature.
+
+Suppose we notice from a plot that two feature are related by the
+relation x1 < x2 - 1, which produces a typical triangular shape in the
+scatterplot. How can we use it? For tree models we could create a new
+feature with =x1 - x2= or =x1 / x2=. In another example the scatterplot
+shows a number of triangular clusters. We may use a feature to
+understand to which triangle a point belongs, and this may help. When
+the number of features is small, we can plot pairwise scatterplots. We
+can compute distance between the columns and create a heatmap of shape
+$n_f \times n_f$, where $n_f$ is the number of features. For this
+purpose we can use:
+
+#+BEGIN_EXAMPLE
+  df.corr()
+  plt.matshow(...)
+#+END_EXAMPLE
+
+We could also compute how many times one feature is larger than another,
+or how many different combinations a feature has in a dataset. If the
+matrix looks random, clustering can be useful. More in general, grouping
+feature can be useful, and some statistics calculated over gruops can be
+useful as a feature. Similary we can compute a feature statistics, sort
+it, and see if there are clear groupings (dotplots with gaps).
+
+#+BEGIN_EXAMPLE
+  df.mean().sort_values().plot(style='.')
+#+END_EXAMPLE
+
+Summarizing, the functions we have seen so far are:
+
+#+BEGIN_EXAMPLE
+  plt.scatter(x1, x2)
+  pd.scatter_matrix(df)
+  df.corr()
+  plt.matshow(...)
+  df.mean.sort_values().plot(style='.')
+#+END_EXAMPLE
+
+- Explore individual features :: 
+
+  - Histogram
+
+  - Plot (index vs value)
+
+  - Statistics
+
+- Explore feature relations :: 
+
+  - Pairs:
+
+    - Scatter plot, scatter matrix
+
+    - Correlation plot
+
+  - Groups:
+
+    - Correlation plot + clustering
+
+    - Plot (index vs feature statistics)
+
+*** Dataset cleaning and other things to check
+    :PROPERTIES:
+    :CUSTOM_ID: sec:orge1b4b12
+    :END:
+
+The organizers may give us a fraction of the observations, or of the
+features or both. We may find a feature that has the same value in the
+training and test set. For example, the feature is the year, and the
+organizers only exported one year of data. We should get rid of such
+features. It can be the case that a feature is constant on the training
+set, but is not on the test set. It is better to remove this feature
+too. A linear model may assign a weight to this feature in the trianing
+set, but it could be completely off on the test set. When we have values
+appearing only in the test set, we should understand whether these
+values have a big impact, for example simulating such values in the
+validation set. If we find that it has a big impact, we may decide to
+create a separate model for the values containing those features.
+
+We can find these values with.
+
+#+BEGIN_EXAMPLE
+  train.nunique(axis=1) == 1
+#+END_EXAMPLE
+
+Sometimes there are duplicated numierical features. These should be
+removed, and can be found with:
+
+#+BEGIN_EXAMPLE
+  traintest.T.drop_duplicates()
+#+END_EXAMPLE
+
+We could have duplicated categorical features with identical levels, but
+different labels. The simplest way to deal with this situation is to
+turn them into numeric features by using label encoding appropriately.
+We should label features in order of appearance, and one way to get rid
+of this case is:
+
+#+BEGIN_EXAMPLE
+  for f in categorical_feats:
+      traintest[f] = traintest[f].factorize()
+  traintest.T.drop_duplicates()
+#+END_EXAMPLE
+
+Another thing to check is whether there are duplicated rows. In
+particular, if identical rows have different labels, the competition
+will be a roulette and our understanding will be random. In one
+competition a feature was repeated 100,000 times, and needed to be
+removed to have a high score in the test set. It is however always
+useful to understand why such duplicated rows appear in the first place.
+
+We should check whether training and test sets have common rows. This
+can provide information about the data generation process. We could set
+labels manually for the rows in the test set that appear in the training
+set.
+
+It is very useful to check whether the data-set is shuffled, because if
+this is not the case, chances are that there are leaks we can exploit.
+One way to check this is to plot either a feature or the label vs. the
+row index, optionally smoothing with a moving average. In the Quora
+Question Pairs competition the values of a feature clearly drops towards
+the end of the indexes, and clearly deviates from the average.
+
+Summarizing, we have the following EDA checklist:
+
+- Get domain knowledge
+
+- Check if the data are intuitive
+
+- Understand how the data were generated
+
+- Explore individual features
+
+- Explore pairs and groups
+
+- Clean feature up
+
+- Check for leaks
+
+- Use plots to find/generate /magic features/
+
+1. The Springleaf competition EDA (Dmitry Ulyanov) [sec:orgb70e2d1]
+
+   The goal is to predict whether a client will respond to direct email
+   offers from Springleaf. The response variable is 1 if he will respond
+   and 0 if he will not. The notebook used to illustrate these topics
+   can be found
+   [[https://github.com/gdario/competitive-data-science/blob/master/Reading%2520materials/EDA_Springleaf_screencast.ipynb][here]]
+   (forked from the original repo). It can also be found in the course
+   site.
+
+   There are > 1900 features, and the training set has one more feature
+   than the test set, presumably the response variable. If we look at
+   the first entries we notice that the training set has an =ID= column
+   containing mostly even numbers, while the test set has mostly odd
+   numbers, and they don't overlap. The organizers probably samples from
+   a larger table.
+
+   We then look at the type of the various features. Some are clearly
+   numeric, some clearly categorical, but for some it's not so clear,
+   and some have really strange values. Next we want to find missing
+   values, first row-wise, by using:
+
+   #+BEGIN_EXAMPLE
+     train.isnull().sum(axis=1)
+   #+END_EXAMPLE
+
+   When looking at the number of =NaN=s for each row, we see that 6
+   consecutive rows have 24 of them. It is unlikely that this pattern is
+   at random, and may suggest that there is some pattern in the row
+   order. In other words, the rows are not shuffled. This suggests that
+   we could use the row index as another feature for our classifier. We
+   can do the same thing with the columns, and we see that many columns
+   have 56 =NaN=s, so we have a pattern here too.
+
+   This data-set has almost 2000 features, all of which anonymized, and
+   it's not easy to work with it. The first thing we can do is to
+   determine the type of the data. They concatenate the training and the
+   test set and then count how many unique values each column has. We
+   see that there are a number of columns with only one unique value, so
+   these are useless for our purposes.
+
+   They replace =NaN=s with something that they can find, by using:
+
+   #+BEGIN_EXAMPLE
+     # traintest is the concatenation of training and test
+     traintest.fillna('NaN', inplace=True)
+   #+END_EXAMPLE
+
+   In order to remove duplicated features, they then create another
+   data-set with the same shape as the training set, where the columns
+   are label-encoded. Apparently they do it with all the columns, not
+   only the categorical ones, which makes sense, as they have 2000 of
+   them and it would take forever to decide what to do with the dubious
+   ones.
+
+   #+BEGIN_EXAMPLE
+     train_enc = pd.DataFrame(index=train.index)
+     for col in tqdm_notebook(traintest.columns):
+         train_enc[col] = train[col].factorize()[0]
+   #+END_EXAMPLE
+
+   They then just loop over the columns as follows:
+
+   #+BEGIN_EXAMPLE
+     dup_cols = {}
+
+     for i, c1 in enumerate(tqdm_notebook(train_enc.columns)):
+         for c2 in train_enc.columns[i + 1:]:
+         if c2 not in dup_cols and np.all(train_enc[c1] == train_enc[c2]):
+             dup_cols[c2] = c1
+   #+END_EXAMPLE
+
+   This shows that there are a lot of duplicated rows. This loop takes
+   some time, therefore they pickle the results to disk. We now want to
+   determine the type of our variables. We use again the
+   =train.nunique(dropna=False)= function to count the number of unique
+   values (now they are 2 or more). Using =dropna=False= is important
+   because it guarantees that =NaN=s are counted as unique values. The
+   training set has about 150k rows, but most columns have less than 100
+   unique values. They plot a histogram of these unique values divided
+   by the number of features.
+
+   #+BEGIN_EXAMPLE
+     plt.figure(figsize=(14, 6))
+     # nunique is the number of unique entries, counting also the NaNs
+     _ = plt.hist(nunique.astype(float) / train.shape[0], bins=100)
+   #+END_EXAMPLE
+
+   This shows that there are many features that have very few unique
+   values, and a very small number of features which have almost one
+   value per row (=ID= being one of them). We can take a closer look at
+   them selecting the features with 80% or more of the values are
+   unique.
+
+   #+BEGIN_EXAMPLE
+     mask = (nunique.astype(float) / train.shape[0] > 0.8)
+     train.loc[:, mask]
+   #+END_EXAMPLE
+
+   This shows the three columns which have a large fraction of unique
+   values. =ID= contains integers, which we expect. Two other columns
+   contain large values that look like large floats because of
+   scientific notation, but are actually integers. What could these
+   columns be? They may be counters or times of some sort.
+
+   They then explore features with a fraction of missing values between
+   0.4 and 0.8. Some of the column names (they are all of the form
+   =VAR_xxxx=, where =xxxx= is an integer) are consecutive. This
+   suggests that the columns may be grouped together based on some
+   criterion. Some of the rows have the same values across different
+   columns, some don't. This, again, may indicate that the features are
+   grouped in some way. XGBoost would really struggle to find that 2 or
+   5 features are equal, so, if we can find it before modeling, this
+   would be very useful. We may count, for each row/object (objects are
+   in the rows, features are in the columns), how many features have the
+   same values, this count could become a feature of its own.
+   Alternatively, we could set a new feature to 1 if the values in
+   certain columns are the same, and 0 if not. In other rows there may
+   be different patterns that we may exploit. We also see values like
+   -9999 or 999999. These are almost certainly missing values.
+
+   We now identify the categorical and the numerical values with the
+   following code. Notice the use of =include= and =exclude=.
+
+   #+BEGIN_EXAMPLE
+     cat_cols = list(train.select_dtypes(include=['object']).columns)
+     num_cols = list(train.select_dtypes(exclude=['object']).columns)
+   #+END_EXAMPLE
+
+   We also replace =NaN= with something like -999. Dmitry went through
+   each feature one-by-one but after about 250 stopped. In the video he
+   takes the first 42 numeric features and creates a matrix where each
+   element $x_{ij}$ is the fraction of elements in feature $i$ that are
+   greater than the values inf feature $j$. The value of this matrix is
+   that you can see patterns that shouldn't be there if the columns were
+   at random. If, for example, we observe a clear vertical pattern, that
+   may indicate a /cumulative/ event, for example number of event counts
+   after one month, after two months etc. We could then create a new
+   feature containing the difference between two consecutive events.
+   These features would be particularly useful for tree-based methods,
+   while neural networks and linear models could find these patterns
+   automatically (why?).
+
+   After this exploration Dmitry focuses on some specific variables,
+   plotting the histograms for variables =VAR_0002= and =VAR_0003=. The
+   histograms shows clear, regularly spaced spikes. If we take, for
+   example =train[’VAR_0002’].value_counts()=, we see that the most
+   frequent values are 12, 24, 36. This may be connected to hours or
+   months. We could introduce another feature as this variables module
+   12. It might be that the organizers added some noise to obfuscate
+   these data, and that they were originally all quantized. They repeat
+   the same operation with feature =VAR_0004= and plot two histograms of
+   the variable module 50, one for class 0 and one for class 1. The only
+   visible difference is in the first peak, therefore this new feature
+   would be discriminant.
+
+   They then look at the categorical features. Some contain =[]=,
+   possibly an encoding problem. Some contain date-times and some are
+   =NaT=, which stands for Not a Time. Some are city names and some are
+   state names, so we can also generate some geographic features. Dmitry
+   gathered all the date-time columns he could find into a list and
+   formatted them in a coherent way. He then plotted these date-time
+   features against each other, and found that one is always greater
+   than the other (features =VAR_0217= and =VAR_0073=). So these are
+   dates of events that always occur one after the other. We could then
+   extract features like the difference between two dates, and it turned
+   out that this was a very valuable feature.
+
+2. Numerai competition EDA (Dmitry Altukhov) [sec:orge015a0c]
+
+   This was a competition held in 2016. Numerai, the organizer, changed
+   the format of its data-set in 2017, therefore the findings shown here
+   will not apply to the more recent competitions.
+
+   In the data-set there are 21 anonymized features and the task is a
+   binary classification. What makes the competition unusual is that
+   both the training and the test sets are updated every week. Data sets
+   were also shuffled column-wise every week, so that every week the
+   task would be different. It turned out that the challenge had a data
+   leak. The organizers didn't disclose any information about the data,
+   but allegedly it was time series data where the target variable
+   depends on changes between each point (like returns). If we knew the
+   true order or time stamps, we could obtain a perfect score. They
+   tried to reconstruct, if approximately, the order via nearest
+   neighbors analysis, and this reconstruction gave a huge advantage.
+   The key step was finding, for each data point, the nearest neighbor
+   and add all 21 original features from that neighbor to the original
+   point. Just using logistic regression on the 21 original features and
+   21 NN features provided a top 10 score.
+
+   They create a sorted (clustered) correlation matrix of the features.
+   This already allows to fix some column order, so that the column
+   shuffling will not affect the analysis too much. They also observe 7
+   groups of highly correlated features. Each week a new data-set is
+   provided, and each data-set has the same number of points. We should
+   expect connections between consecutive data-sets. For each data-set
+   they plot the distance of the nearest neighbor to a point in the
+   current data-set, and do the same for 2nd NN, 3rd NN etc. The 1st NN
+   appears much closer than the others (distributions peaked closer to 0
+   and narrower).
+
+*** Validation (Alexander Guschin)
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org2eab664
+    :END:
+
+1. Validation and overfitting [sec:org1381418]
+
+   Sometimes competitors select the submission that scored best on the
+   public leaderboard, just to find that it performs badly on the
+   private one. On other occasions competitions do not have consistent
+   public/private data spits, or they have too listtle data in either
+   the public or the private leaderboards. In this section we will:
+
+   1. Understand the concept of validation and overfitting.
+
+   2. Identify the number of splits that should be done to establish
+      stable validation.
+
+   3. Go through the most frequent split methods to create train/test
+      sets.
+
+   4. Discuss the most frequent validation problems.
+
+   The goal of validation is to make sure that our model produces
+   expected sensible results on unseen data. If we have trained a model,
+   we want to make sure that it will be applicable in the future and
+   that it will produce correct results. In other words, we want to
+   understand the quality of our model. This, however, differs between
+   the training set (the past) and the test set (the future). The model
+   may just memorize all the data from the training set, and this would
+   make it useless on future data. Usually we divide our training set
+   into a training part and a validation part.
+
+   In competitions data are split into a training set (with labels) and
+   a test set (without labels). In addition, the test set is further
+   split in a public part (the one we can download) and a private one
+   (inaccessible to us). If we used the training set to train a model
+   and the validation set to check its performance, some models would
+   perform better than others purely by chance. If we kept selecting and
+   improving these models, we would consistently see improvements on the
+   validation set, but this doesn't guarantee that these progresses will
+   apply to the test set. In other words, we are overfitting our
+   validation set. The same thing may happen with the public
+   leaderboard, and this is referred to as "overfitting the
+   competition", where we have unrealistically good results on the
+   public leader-board, but much worse results on the private one.
+
+   We want our model to capture patterns in our data, but only those
+   patterns that generalize well in training and (both) test data. We
+   want to avoid under-fitting on one side, and over-fitting on the
+   other. Please note that the meaning of over-fitting in machine
+   learning in general, and in competitions in particular, are slightly
+   different. In the first case we speak of over-fitting when the
+   quality on the training set is better than on the test set. In
+   competitions we talk about over-fitting when the quality on the test
+   set is worse than what we would have expected. *UNCLEAR DISTINCTION
+   BETWEEN OVERFITTING IN ML AND IN COMPETITIONS*. Summarizing:
+
+   1. Validation is useful to understand the quality of the model on
+      unseen data.
+
+   2. Validation helps us to select the model that will perform best on
+      unseen data.
+
+   3. Under-fitting refers to not capturing enough patterns in the data.
+
+   4. In general, over-fitting refers to:
+
+      - Capturing noise.
+
+      - Capturing patterns that do not generalize to test data.
+
+   5. In competitions, over-fitting refers to:
+
+      - Low model's quality on test data which was not expected due to
+        good validation scores.
+
+2. Validation strategies [sec:org0b19ea1]
+
+   In this section we will learn how many splits we need, and what are
+   the most frequently used splitting strategies. Loosely speaking, the
+   main difference between these strategies is the number of splits. We
+   will discuss:
+
+   - Hold-out.
+
+   - K-fold.
+
+   - Leave-one-out.
+
+   1. Hold-out [sec:org047af09]
+
+      This can be obtained in Scikit-Learn as follows:
+
+      #+BEGIN_EXAMPLE
+        sklearn.model_selection.ShuffleSplit
+      #+END_EXAMPLE
+
+      This divides the data set into a training and a validation set.
+      Each sample can only belong to one set, and it is important to
+      make sure that duplicated observations do not end in both. If this
+      happens, predictions for these samples will be unrealistically
+      accurate, and the overall performance will be too optimistic. This
+      can prevent us from selecting the best parameters for proper
+      generalization.
+
+      With a single hold-out set we train our models on the training set
+      and assess their performance on the validation set. Once we have
+      selected a model, based on the validation set, we re-train it on
+      the training + validation set, and apply it to the test set to
+      then submit to the public leader-board.
+
+      The hold-out validation is usually a good choice if we have enough
+      data, or when we have good reasons to believe that we would obtain
+      similar results using different splits between training and
+      validation sets.
+
+   2. K-fold [sec:orga3efb2f]
+
+      K-fold can be seen as a repeated hold-out. This can be obtained in
+      Scikit-Learn with:
+
+      #+BEGIN_EXAMPLE
+        sklearn.model_selection.Kfold
+      #+END_EXAMPLE
+
+      K-fold validation is different from repeating hold-out validation
+      K times with random splits. In the former case, each sample
+      appears only once in the test set. In the latter some samples may
+      appear multiple times, and some others never. K-fold validation is
+      a good choice when we have a medium amount of data and we can
+      expect large differences in quality in different folds (and,
+      therefore, different optimal parameters between folds).
+
+   3. Leave-one-out [sec:org5d2025b]
+
+      This is a special case of K-fold, where K equals the number of
+      samples. We use K-1 samples as a training set and the left out
+      sample as a test sample. This is useful when we have too little
+      data to use the other approaches. Which approach shall we use and
+      when? We use hold-out or K-fold on /shuffled data/. If we have a
+      small data-set with not enough examples for one class, a random
+      split may fail. Imagine that we have the case shown below. We have
+      8 observations split into 4 folds of 2 observations each. Notice
+      that we don't always have both labels in the same fold. If we used
+      fold 2 as a validation set, we would have an average value of the
+      label of 2/3 in the training set, instead of 1/2, and this can
+      drastically change the predictions of our model.
+
+      | Label | Fold | Average value |
+      |-------+------+---------------|
+      | 0     | 1    | 0.5           |
+      | 1     | 1    | 0.5           |
+      | 0     | 2    | 0             |
+      | 0     | 2    | 0             |
+      | 1     | 3    | 1             |
+      | 1     | 3    | 1             |
+      | 1     | 4    | 0.5           |
+      | 0     | 4    | 0.5           |
+
+      In a case like this we need *stratification* to make sure that
+      each fold has a balanced representation of the labels. This
+      problem is particularly relevant when we have:
+
+      1. Small data-sets.
+
+      2. Unbalanced data-sets.
+
+      3. Multi-class classification with a large number of classes.
+
+      Summarizing:
+
+      - Hold-out :: if you have enough data, and you expect to find
+        similar scores and similar values of the optimal parameters for
+        different splits.
+
+      - K-fold :: if scores and optimal parameter values differ for
+        different splits.
+
+      - LOO :: if we have very little data.
+
+      - Stratification :: preserves the same target distribution over
+        different folds, and makes validation more stable. It's
+        especially useful for small and unbalanced data-sets.
+
+      You can find more details in the
+      [[https://www.coursera.org/learn/competitive-data-science/supplement/T4SVY/validation-strategies][reading
+      material]].
+
+*** Data splitting strategies
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org570e4a4
+    :END:
+
+In this section we will consider a time-series competition, where we are
+required to predict the number of customers for a shop for each day
+during next month. We could do two things: a random split or a
+time-split, where we use as validation set all entries after a certain
+date. In the first case, in order to predict the hold-out values, we
+could just interpolate the values immediately before and after. The
+golden rule for creating a reliable validation set is to mimic as
+closely as possible the train/test split. The second approach needs to
+learn about trends and similar. Using the wrong validation strategy, we
+would end up not only with features that are useless for the final
+generalization to the test set, but we would also have predictions that
+are far from the test set values. You can consider a linear function
+where in one case we randomly sample the training and test set. In both
+cases, predictions will be close to the mean value. Not so if we use a
+time-based split. Summarizing, different splitting strategies can differ
+significantly in
+
+1. Generated features.
+
+2. The way our model relies on those features.
+
+3. In some kind of target leak.
+
+Therefore, it is crucial to understand what kind of train/test split the
+organizers have used, and reproduce it as closely as possible. Most
+splits can be divided into three categories:
+
+1. Random split.
+
+2. Time-based split.
+
+3. Split by ID.
+
+1. Random split [sec:org741005e]
+
+   In this case we assume that rows are independent of each other. If,
+   however, there are dependencies between rows, we can try to exploit
+   them. For example: in the case of a credit assignment problem, if a
+   husband can get the credit, and both work for the same company, the
+   wife can probably get it too. If they are split between training and
+   test, this can be exploited. This would be an example of data leak,
+   which we will discuss later.
+
+2. Time-based split [sec:orga8382f2]
+
+   Everything before a certain date is used as the training set, and
+   everything after is used as test. We can look for features that
+   leverage on the time-based nature of the split. For example, if we
+   need to predict the number of customers on a given week, we can use
+   the number of customers in the previous week as a feature, or the
+   average number of customers in the past month.
+
+   A special type of validation split is a *moving window* validation,
+   where we move the boundary between training and validation set
+   forward in time.
+
+   | week 1 | week 2 | week 3     | week 4     | week 5     |
+   |--------+--------+------------+------------+------------|
+   | Train  | Train  | Validation | Validation | Validation |
+   | Train  | Train  | Train      | Validation | Validation |
+   | Train  | Train  | Train      | Train      | Validation |
+
+3. Split by ID [sec:org91c4ef4]
+
+   ID can be a unique identifier of users, shops or any other entity.
+   Example: we need to make music recommendations to new users. We have
+   therefore two sets of IDs, the ones in the training set and those in
+   the test set. In a case like this, historical information on a given
+   user will generally not help with new users. In the Caterpillar tube
+   pricing competition the split was performed on some ID, namely the
+   tube ID. One interesting case is when we should use ID-based split,
+   but the IDs are hidden from us. Two such cases were the Intel and
+   MobileODT Cervical Cancer Screening competition and the Nature
+   Conservancy competition. In the first case, we needed to classify
+   patients into three classes, and for each patient we had several
+   pictures. Patients did not overlap between training and test set. In
+   the Nature Conservancy there were photos of fish from various fishing
+   boats. Fishing boats did not overlap in training and test, therefore,
+   as before, one would have easily overfitted if we didn't take care of
+   doing the same with our training/validation split. In these
+   competitions, however, the IDs were not provided, and the competitors
+   had to derive them by themselves. This could be done by clustering
+   the pictures, since they were taken one after another (note the
+   simple approach, rather than some complex CNN-based model). Check the
+   kernels for this competitions.
+
+4. Combined [sec:org87de872]
+
+   Sometimes the split strategy can be a hybrid. For example, if we need
+   to predict sales in a series of shop, we can use a time-based split
+   for each shop independently instead of using the same date for each
+   shop. Similarly, if we have search queries from multiple users, each
+   using different search engines, we can split the data by combinations
+   of user ID and search engine ID. Again, this is to avoid leaking
+   information between the training and validation set. In a competition
+   (Deloitte Australian Rental prices) the train/test split was based on
+   a single date split, but the public/private split was based on
+   different date splits for different geographic areas. In the second
+   competition the goal was to predict whether a user of an online music
+   service would listen to a song. The train/test split was done as
+   follows: for each user, the last song he listened to was put in the
+   test set, while all other songs were put in the training set.
+
+   Bottom line: your train/validation split should always mimic the
+   train/test split by the organizers. It could be sometimes
+   non-trivial. For example, in the "Home Depot Product Search
+   Relevance" competition, participants were asked to estimate search
+   relevance. Data consisted of search terms, and search results for
+   those terms, but the test set contained completely new search terms.
+   In this case it was not possible to use either a random split, or a
+   search term based split. The first split, favored more complicated
+   models, which led to overfitting, while the second did the opposite.
+   Therefore, in order to obtain optimal models, it was crucial to mimic
+   the ratio of new search terms from train/test split. In conclusion:
+
+   1. In most cases the split is by:
+
+      - Row number.
+
+      - Time.
+
+      - ID.
+
+   2. The logic of feature generation depends on the data splitting
+      strategy.
+
+   3. Set up your validation to mimic the train/test split of the
+      competition.
+
+*** Problems occurring during validation
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org54c6ea5
+    :END:
+
+Our expectation is that if we have taken care of the above points, when
+we have an improvement in the validation set, we should expect an
+improvement in the private leaderboard. Sometimes this is not the case.
+Such problems can be divided into two groups:
+
+1. Problems we encounter during validation. These are generally due to
+   inconsistencies of the data. Typical example is getting different
+   optimal parameters for different folds. In these cases we need to
+   make a more thorough validation.
+
+2. Problems we encounter during the submission stage. In this case we
+   observe a mismatch between our validation set and the public
+   leaderboard. These problems usually occur because we cannot mimic the
+   train/test split correctly.
+
+1. Validation-stage problems [sec:orga332828]
+
+   We notice the problems when we have different scores with different
+   train/validation splits. Say we need to predict sales in a shop in
+   February and we have target values for the last year, and we use
+   January for validation. January, in Russia, has many more holidays
+   than February, and people tend to buy more in January, so that our
+   predicted values may differ. This doesn't necessarily mean that the
+   model is bad, or that it overfits. In some cases, like this one,
+   discrepancies are easy to understand. In other cases they are not.
+   There are several reasons why this may happen.
+
+   1. We have too little data. For example, we have a lot of patterns an
+      trends in the data, but not enough data to generalize them well.
+      Each model will therefore use only some of these patterns, and for
+      each fold, such patterns will differ.
+
+   2. Data is diverse and inconsistent. If we have very similar samples
+      with different target values, a model could be easily confused. If
+      one of the two is in the training set and the other is in the test
+      set, we may have a larger error than if both were in the
+      validation set. A similar situation is the one discussed above
+      with the sales from January and February. We may decide to compare
+      this February with the previous February, and this may make more
+      sense.
+
+   If we are in one of these two situations, we may need a more thorough
+   validation. We may use a 5-fold validation and/or make multiple
+   K-fold validation with different random seeds and average the scores
+   for the various splits. We may use one set of K-fold splits to find
+   the optimal parameters, and a different set of splits to check the
+   model.
+
+   Two examples where scores were very close and an accurate validation
+   was key were the following (check the kernels for these
+   competitions).
+
+   1. Liberty Mutual Group Property Inspection Prediction.
+
+   2. Santander Customer Satisfaction.
+
+2. Submission stage problems [sec:org03b9ace]
+
+   You often encounter these problems only when you submit your results
+   to the platform. EDA is your best friend when it comes to finding the
+   root cause of the problem. In some cases the leaderboard (LB) score
+   is consistently higher/lower than the validation score. In other
+   cases the LB score is not correlated with the validation score at
+   all. As usual, the solution is to mimic closely how the organizers
+   did the train/test split, and this can be quite hard. This is why
+   it's useful to start submitting your solution as early as possible.
+
+   If we already have different scores in different folds, we can see
+   the LB as yet another fold. If the different score in the LB is
+   comparable with the different score from the different folds, than we
+   shouldn't be too surprised. More scientifically, we could calculate
+   the mean and the standard deviation of the K-fold scores, and check
+   whether the score on the LB is unexpected. If this is not the case,
+   we may be in one of these situtations:
+
+   1. There's too little data in the public leaderboard. In this case,
+      you just should trust your validation, and everything will be OK.
+
+   2. The training and the test data are from different distributions.
+
+   As an example, imagine predicting the height of people from their
+   images on instagram. If the training set consists only of women and
+   the test set only of men, our predictions will be similar to those
+   for women, and will be really bad in the test set. What to do in such
+   cases? Sometimes the trick consists in adjusting your solution during
+   the training procedure. In other cases, instead, the problem can only
+   be solved by adjusting the solution to the LB. This is called
+   *leaderboard probing*. The simplest approach is to find the best
+   constant prediction for the training and the test data separately,
+   and shift your prediction accordingly. In other words, we are just
+   shifting the distribution of our predictions so that they will match
+   the test targets. In the case of male and female heights, we could
+   send a couple of constant predictions and, if the error metric is
+   MSE, we can write down a simple formula and estimate the average
+   height for men. If we now find that the difference between male and
+   female heights is 7in, we could add 7 inches to all our predictions.
+
+   The Quora Question Pairs competition had a similar issue. Here the
+   distributions of the targets in the training and test sets were
+   different, and one could significantly improve the score by adjusting
+   to the leaderboard. This case, luckily, are not too frequent. A more
+   common scenario is where, in the above example, our training set is
+   composed on /only/ of women, but /mostly/ of women, and the opposite
+   for the test set. Again, try to make the validation set as close to
+   the test set as possible. If the test set is composed mostly of men,
+   make the validation set as unbalanced. This is true both for getting
+   correct scores and optimal parameters as well.
+
+   In the CTR competition (the one with the triangular scatterplot), the
+   problem was that ads that were not shown were not present in the
+   training set. Conversely, the test data contained every possible ad.
+   We had a huge bias towards shown ads in the training set, and in
+   order to match the test set, we had to inject the rows corresponding
+   to the non-shown ads.
+
+   In the Data Science Game 2017 Qualification phase, participants had
+   to predict whether a user would listen to a song recommended by a
+   system. The test set contained only recommended songs, while the
+   training set contained both recommended songs and songs users
+   selected themselves. One could adjust the validation set by removing
+   songs chosen by the users. Summarizing:
+
+   1. If you have too little data in the public leaderboard, just trust
+      your validation data.
+
+   2. If this is not the case, make sure you did not overfit.
+
+   3. Then make sure you made correct train/test splits as discussed
+      above.
+
+   4. Check if you have different distributions in the train and test
+      sets.
+
+3. LB shuffled [sec:orgf775bf1]
+
+   LB shuffle occurs when participant positions in the public and
+   private LB are drastically different. There are three main reasons
+   why this may occur.
+
+   - Randomness :: this happens when participants have very similar
+     scores, and they tend to overfit on the public leaderboard. The
+     opposite scenario happened with the Two Sigma financial
+     competition. Here the data were highly unpredictable, hence the
+     randomness.
+
+   - Little amount of data :: Example is TFI restaurant revenue
+     prediction competition. here the train set consisted of ~200 rows
+     and test set of ~400 rows. Here LB shuffle was unavoidable.
+
+   - Different public/private distributions :: an example is the
+     Rossmann competition, and more in general with time-series
+     competitions. People tend to adjust their submissions to the public
+     LB and overfit. Here, again, trust your validation results, and
+     everything will be fine.
+
+   In conclusion:
+
+   1. If we have big dispersion of scores on the validation stage, we
+      should do extensive validation. This means:
+
+      - Average scores from different K-fold splits.
+
+      - Tune model on one split, evaluate the score on the other.
+
+   2. If the submission score do not match local validation score:
+
+      - Check if we have too little data in the public LB.
+
+      - Check if we have overfitted.
+
+      - Check if we chose the correct splitting strategy.
+
+      - Check if training and test have different distributions.
+
+   3. You can expect LB shuffle because of:
+
+      - Randomness.
+
+      - Too little data.
+
+      - Different public/private test distributions.
+
+*** Basic data leaks - Dmitry Altukhov
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org68dbd79
+    :END:
+
+In this section we will define leaks in a very general way: as
+unexpected information in the data that allows us to make
+unrealistically good predictions. We can think of it as adding directly
+or indirectly ground truth to the test data. Data leaks are unusable in
+the real world as they provide too much signal, and competitions can
+turn into leak exploitation races. Data leaks are usually the result of
+errors. Whether to exploit them is a question that applies only to
+competitions, not to the real world. We will see the main types of
+leaks. Then we will go deeper into leaderboard probing. Finally we will
+consider some concrete examples.
+
+The most typical example involves time series, and is called *future
+peeking*, and consists in using information from the future. In
+competitions the first thing to do is to look at the train/public
+private splits. If they are not based on time, there is for sure a data
+leak, and the leaked features will turn out to be the most important.
+Even when the split is by time, we can still use information from the
+future. For example, we can use information in the rows of the test set.
+We may have user history for click-through rate (CTR) tasks, or some
+fundamental indicators in stock market predictions. Only competitions
+where we have no information about the future (where, for example, we
+have only the target labels for the test set) are safe in this respect.
+
+Sometimes we have more than just the training and test data. For example
+if the dataset is about images, we may have various forms of
+/meta-information/: image resolutions, file creation dates etc. This
+meta-information may be connected to the label information. In the case
+of a cats vs. dogs competition, what if all the dogs images were taken
+before the cat pictures? Or if a different camera was used for the two
+sets? Usually organizers remove these meta-data, resize the images, and
+erase the creation dates. Sometimes, however, they don't. For example,
+in the Dato competition, one can get almost perfect scores just from the
+dates of the zip archives.
+
+Another type of leakage can be found in IDs. In theory, it doesn't make
+sense to include them in the model, as they should be automatically and
+randomly generated. In practice, this is often not true. IDs may be the
+hash of something not originally intended for disclosure, and may
+contain information connected to the target labels. It was the case in
+the Caterpillar competition, where including the IDs improved the
+results. Always check whether the IDs are useful or not (in a
+competition).
+
+Next, we can consider row-order. A trivial case is when the rows are
+sorted by class label. In this case, just adding row number or relative
+number, would increase the score. In the TalkingData Mobile User
+Demographics Competition there was some form of row duplication, and
+rows next to each other tended to have the same label.
+
+Summarizing, four things to check to find the "ordinary" types of leaks,
+are:
+
+- Future peeking.
+
+- IDs.
+
+- Meta-data.
+
+- Row order.
+
+*** Leaderboard probing and examples of rare data leaks
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org07bcc11
+    :END:
+
+There are two types of LB probing. The simplest one consists in
+extracting all ground truth from the public part of the leaderboard. You
+can find more about this in
+[[https://www.kaggle.com/olegtrott/the-perfect-score-script][Oleg
+Trott's post]]. Our focus will be on another type of LB probing.
+Sometimes it's possible to make submissions in a way that will give away
+information about the private test set. This approach is based on the
+existence of /consistent categories/. In the example we consider a
+situation where the same entries in a chunk have the same labels. For
+example, the entries below with the same ID have the same labels.
+
+| id | y | test set |
+|----+---+----------|
+| 1  | 0 | public   |
+| 1  | 0 | private  |
+| 1  | 0 | public   |
+| 2  | 1 | public   |
+| 2  | 1 | private  |
+| 2  | 1 | private  |
+
+The chunk with the same id is split into public and private LB, and if
+we know that all entries in that chunk have the same labels, we can try
+setting them all to 0 and see if the score improves. If it worsens, than
+we should try to set them to 1. Some competitions had these sort of
+categories (like id in our example) which, with high probability, had
+the same labels. Examples are the RedHat and the West Nile competitions.
+Such categories don't have to have exactly the same labels. They can be
+consistent in broader ways, for example by having the same distributions
+in the public and private test sets. This was the case in the Quora
+competition. We may have that the label distribution differs between
+training and test set, but is allegedly the same in the public and
+private parts of the test set. We could then use the whole test set as a
+consistent category.
+
+$$-L N = \Sum_{i=1}^{N} (y_i \log C + (1 - y_i) \log (1 - C))$$
+$$-L N = N1 \log C + (N - N_1) \log (1 - C))$$
+$$\frac{N_1}{N} = \frac{-L - \log (1 - C)}{\log C - \log (1 - C)}$$
+
+The equations above represent the log loss for constant submissions $C$
+(the constant label) in the category. Here $N$ is the total number of
+rows and $N_1$ is the number of rows with target 1. $L$ is the LB score
+produced by the constant prediction. The third equation allows to
+calculate the ratio of $N_1$ and $N$, i.e., the true ratio of labels
+equal to one in the test set. This knowledge allowed to re-balance the
+training set to have the same distribution of the target variable as in
+the test set, and this gave a big boost to the score.
+
+Let's look at some more peculiar examples of data leakage. In the Truly
+Native competition the goal is to predict whether the content of an HTML
+files is sponsored or not. There was a data leak in the archive dates,
+and it seems that sponsored and non-sponsored HTML files were obtained
+in different periods of time. Do we get rid of the data leaks after
+removing the archive dates? No. Text in the HTML files can be connected
+with the creation dates in other ways, from timestamps to more subtle
+date-related content. The problem was not really meta-data leak, but
+rather data collection.
+
+*STOP AT MIN 5.50 - CONTINUE FROM HERE*
+
+*** Data Leaks
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org4d4a3b1
+    :END:
+
+1. Examples of Leaderboard Probing [sec:org10054f2]
+
+   1. Dato Truly Native Competition [sec:org388626f]
+
+      The goal was to predict whether the content of an HTML file was
+      sponsored or not. There was a leak in the archive dates: sponsored
+      and non sponsored pages were probably collected at different
+      times. Even erasing the file creation information, however, we may
+      still have information leakage. Text in the HTML files can be
+      connected to dates in more subtle ways. Here the problem wasn't
+      meta-data leak, but rather the data collection process.
+
+   2. Expedia competition [sec:org419c03b]
+
+      This is covered in more detail below. Here participants were
+      working on logs of customers behavior. This included what the
+      customers searched for, how they interacted with the results
+      (clicks), and whether or not the search turned into a travel
+      package. Expedia was interested in predicting what hotel group
+      customers would end up booking. One of the features was the
+      distance from a user to a hotel, and this feature turned out to be
+      a huge data leak. From this feature one could map the ground truth
+      from the training set to the test set.
+
+   3. Flavors of physics [sec:orgdfe7ecb]
+
+      This was a competition based on particle physics data from the
+      hadron collider. The data were actually simulated, as the
+      organizers were looking for a ML solution for something that had
+      never been observed. Simulations, however, can be exploited and
+      reverse engineered. The organizers created statistical tests to
+      punish solutions that took advantage of the flaws of the
+      simulations. One, however, could bypass the tests, exploit the
+      simulations, and obtain a perfect score.
+
+   4. Quora question pairs competition [sec:org92bf1cb]
+
+      Here the goal was to predict whether a pair of items was actually
+      a duplicate. Participants are not asked to evaluate /all/ pairs of
+      items. There is always some non-random sub-sampling, which turns
+      into the cause of the data leakage. The organizers tended to
+      sample more frequently hard to distinguish pairs, and this creates
+      an imbalance. The result of this is that the more frequent items
+      had the highest probability of being duplicates. One approach
+      consisted in creating a matrix where, if item i and item j appear
+      in a pair, we set items {i, j} and {j, i} to 1. Now we have a
+      vector representation for each item, and we can compute
+      similarities between vectors. If two items are similar to the same
+      things, they have a high probability of being duplicates.
+
+2. Expedia hotel recommendation challenge [sec:orgab78ca1]
+
+   Our prediction target in this competition was a hotel group or, in
+   other words, characteristics of a hotel. Among the features there was
+   a =destination_distance= from the user's city to an actual hotel. The
+   distance was very precise, so that unique users cities and unique
+   distances corresponded to unique hotels, and many matches between
+   train and test set could be found. When the same user-city and
+   distance pair appeared in the test set, one could just copy the label
+   from the training set, and this worked almost perfectly. However,
+   almost half of the test set consisted of new pairs. To deal with
+   these cases, Dmitry and his team used two approaches. One approach
+   consisted in creating count features based on counts on /cortege/
+   with similar characteristics *what is a cortege?*. For example, how
+   many hotel of each group there are for each user's city, hotel
+   country and hotel city triplet. Another approach consists in finding
+   more matches. For this purpose, they needed to find the true
+   coordinates of users cities and hotel cities (not in the training
+   set). With this information, and with the feature containing the
+   distance between the user city and the hotel, it was possible to find
+   the coordinates of the hotel.
+
+   They use Haversine formula, to work on spherical coordinates. Assume
+   we know the true coordinates of three points, and their distance from
+   a fourth point with unknown coordinates. We can then solve a system
+   of 3 equations and unambiguously derive the coordinates of the fourth
+   point. They did it in an iterative way, first finding the coordinates
+   of few big cities, and then, given this information, the coordinates
+   of other cities, and so on. Unfortunately, some of the estimated city
+   coordinates ended up in the middle of the ocean, as the rounding
+   error accumulates iteration by iteration. They created a giant system
+   of equations for all known distances, with hundreds of thousands of
+   equations ad tens of thousands of unknown variables. This system, is
+   however, very sparse, and can be solved effectively. This yielded
+   accurate coordinates for hotel cities and user cities. The goal,
+   however, is predicting the /type/ of a hotel. Using city coordinates
+   and destination distances it is possible to find the approximate
+   coordinates of an actual hotel. If we draw a circumference centered
+   on a city and with radius equal to the known distance, the hotel must
+   lie on that circumference. They then select a hotel city and draw a
+   circumference from all user cities to cities to that hotel city and
+   draw them for each destination distance. The assumption is that
+   hotels are in the intersection points of such circumferences, and the
+   more circumferences intersect in a point, the higher the probability
+   of a hotel being there. The pictures are pretty messy, and it's
+   impossible to work in terms of individual points. One can however
+   work with clusters of points. For every city, they create a grid
+   around its center, something like 10km by 10km with step size of
+   100m. For each cell in a grid, we can count how many hotels of each
+   type are present there. If a circumference goes through a cell, we
+   give +1 to the hotel type corresponding to that circumference (*PUT
+   PLOT HERE*). During inference they also draw a circumference based on
+   the destination distance feature. They check from which grid cells
+   the circumference went through, and use those cells to create
+   features like a sum, average or maximum of all counters. Note that
+   all features make use of the target variables, and they couldn't use
+   them as that duyring training and they would generate them in
+   out-of-fold fashion for train data. They had training data for 2013
+   and and 2014. To generate features for 2014 they used labelled data
+   from 2013 and vice versa. For the test set features which was about
+   2015, they used all training data. In the end they calculated a lot
+   of features, and after 16 hours on 40 cores, they got the 3rd
+   position. The winner, /idle$_{\text{speculation}}$/ managed to find
+   more relevant features.
+
+** Week 3 Metrics Optimization
+   :PROPERTIES:
+   :CUSTOM_ID: sec:orgbc8c85b
+   :END:
+
+*** Motivation
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org5b7056c
+    :END:
+
+We will understand why there are so many metrics and when one should use
+a metric rather than another. We will see the difference between a loss
+function and a metric, and we will review the most important metrics for
+regression and for classification tasks. We will also build simple
+baselines for each metric, i.e., if I have to use a constant to predict
+the value or the class of each object, what's the best constant I can
+choose, given e certain metric?
+
+Metrics are an essential part of any competition. Why are there so many
+different metrics? This is because there are many ways to evaluate the
+quality of an algorithm, and each company decides by itself what's the
+most appropriate way for their specific problem. For example, a shop
+wants to maximize the effectiveness of their web-site. The first step is
+to formalize in a quantitative way what we mean by /effectiveness/. It
+can be the number of times the web-site was visited, or the number of
+times something was ordered. In a competition the metric is fixed, and
+our goal is to optimize it. The only thing we need to care about is how
+to get a better score. It is crucial to optimize the very metric we are
+given, and not any other metric. Dmitry shows an example based on linear
+classifiers, taken from "Scalable Learning of Non-Decomposable
+Objectives" by Eban et al, AISTATS 2017. The goal is to show that two
+different metrics can be completely different results.
+
+Some metrics cannot be optimized efficiently, i.e., there is no simple
+way to directly optimize them. In those case we need to optimize
+something else, rather than the original metric, but we also need to
+apply various heuristics to improve the competition metrics score.
+
+Another case where we need to be smart about the metric is when training
+and test set are different. We have seen that with /leaderboard probing/
+we can check whether the mean target value in the public test set is the
+same as in the training set. If not, we will need to adapt our
+predictions to suit this situation. There can be more severe cases where
+an improved score on the validation set does not result in an improved
+score in the test set. This can be particularly challenging, for
+example, when working with time series, even when we did the validation
+split correctly. Sometimes, instead, we simply don't have enough
+training data, and a model cannot capture the patterns.
+
+Dmitry shows a case where the metric was quite unusual: the problem
+involved a time series and if the trend was predicted correctly, the
+metric was the absolute difference, but if the trend was predicted
+incorrectly, the metric was the squared difference. This metric focuses
+much more on getting the correct trend rather than the correct value.
+This was something that one could exploit. It was not possible to
+optimize this metric directly, so what he did was to put all future
+predictions after a value $y_{last}$ to the last value plus or minus a
+tiny constant $y_{last} + 10^{-6}$ or $y_{last} - 10^{-6}$. The sing
+depended on the estimation: what is more likely, that the values in the
+horizon are higher or lower than the last known value?
+
+In other words, it can be useful to perform /exploratory metric
+analysis/ together with /exploratory data analysis/, especially when the
+metric is an unusual one.
+
+*** Regression metrics review I
+    :PROPERTIES:
+    :CUSTOM_ID: sec:org9d9bd93
+    :END:
+
+Although in a competition the metrics are fixed beforehand, it's still
+useful to know in what cases a metric should be preferred to another
+one. We will concentrate on the following metrics, and for each of them,
+we will build the optimal baseline, i.e., the optimal constant model.
+
+- Regression :: 
+
+  - MSE, RMSE, R-squared
+
+  - MAE
+
+  - (R)MSPE, MAPE
+
+  - (R)MSLE
+
+- Classification :: 
+
+  - Accuracy, LogLoss, AUC
+
+  - Cohen's (Quadratic Weighted) Kappa
+
+1. Mean Squared Error [sec:org5e79def]
+
+   Is the most widely used metric. In data science people use it when
+   they don't have a specific preference or when they don't know other
+   metrics. For each point we calculate the square difference between
+   the predicted and the actual value, and we average these square
+   deviations across all the points. Assume we have a very simple
+   data-set, where each object is represented by a value Y and some
+   features X.
+
+   | X   | Y  |
+   |-----+----|
+   | ... | 5  |
+   | ... | 9  |
+   | ... | 8  |
+   | ... | 6  |
+   | ... | 27 |
+
+   Let's ask ourselves, how would the error change, if we fixed all but
+   one of the Ys to the correct value, and we varied the remaining one?
+   If we assume that our predictions for the first 4 rows are correct,
+   and we plot MSE as a function of our predictions for the last point,
+   we obtain a parabola. What's the best baseline model? The optimal
+   constant is the average value. This can be done analytically, or via
+   a grid search.
+
+   There are two metrics closely related to MSE: RMSE and R2. RMSE is
+   simply the root-square of MSE. Since this is a non-decreasing
+   function, the optimal baseline for RMSE is the same as for MSE. RMSE
+   is in the same units of Y, which makes it easier to interpret. RMSE
+   will order models the same as MSE does. On the other hand MSE is a
+   bit easier to work with, and this is why most people work with MSE
+   rather than RMSE. There is however a difference in terms of
+   gradients. If we look at the gradient of RMSE, we see that it is
+   proportional to the gradient of MSE, where the constant does not
+   depend on the index i. This means that traveling along the gradient
+   of RMSE is equivalent to traveling along the gradient of MSE, but
+   with a different learning rate which changes with the inverse of the
+   square root of MSE, and is therefore dynamic.
+
+   $$\frac{\partial RMSE}{\partial \hat y_i} = \frac{1}{2 \sqrt{MSE}} \frac{\partial MSE}{\partial \hat y_i}$$
+
+   Therefore, even if RMSE and MSE are equivalent in terms of optimal
+   values, they are not immediately comparable in terms of gradients.
+
+   If we have an MSE of 32, is it good or bad? There's no way to tell
+   just looking at the absolute values. We can have a relative measure
+   by comparing how much better our model is, compared with the
+   baseline. This relative metric could give us 0 if we are no better
+   than the baseline, and 1 if we are perfect. For this purpose, we use
+   the R2, defined as:
+
+   $$R^2 = 1 - \frac{MSE}{\frac{1}{N} \sum_{i = 1}^{N} (y_i - \bar y)^2}$$
+
+   Note that it is completely equivalent to optimize $R^2$ or $MSE$
+
+2. MAE: Mean Absolute Error [sec:org84a3606]
+
+   This metric penalize large errors less severely, and is less
+   sensitive to outliers than MSE. It has slightly different
+   applications than MSE. It is widely used in finance. According to MAE
+   a 10 dollar error is twice as bad as a 5 dollar error, but according
+   to MSE, it is /four/ times as bad. It can be shown that the optimal
+   baseline is the /median/. In our example data-set, the optimal value
+   for MSE was 11, while for MAE it is 8. This shows that MAE is less
+   sensitive to outliers, and the optimal value tends to lie closer to
+   the bulk of the data.
+
+   The gradient of MAE is a step function equal to -1 when the
+   prediction is less than the actual value, and +1 when it is larger.
+   The gradient is not defined when $\hat y_i = y_i$. The second
+   derivative is zero everywhere, and again, not defined when the values
+   coincide.
+
+   The choice between MSE and MAE really depends on deciding whether
+   there are real outliers in the data, or if there rather are some
+   unusually large observations, which are still possible and plausible.
+
+Take a look at the notebook
+[[https://www.coursera.org/learn/competitive-data-science/notebook/NVBV7/a-note-about-weighted-median][constants
+for MSE and MAE]].
+
+*** Regression metrics review II
+    :PROPERTIES:
+    :CUSTOM_ID: regrMetricRev2
+    :END:
+
+In this subsection we will explore (R)MSPE, MAPE and (R)MSLE. Consider
+the case of two online shops. In the first case the shop predicts to
+sell 9 items but it actually sells 10. In this case the MSE is 1. In the
+second case the shop predicts to sell 999 but sells 1000. The MSE is
+still 1. Despite having the same MSE, it seems reasonable to treat the
+error in the first case as a much more serious one than in the second.
+In this case having a /relative/ measure of error would be more
+relevant. Fig. [[#fig:absVsRel][4]] shows the difference between the
+error curves for the absolute and the relative error metrics. In the
+absolute case the curves are shifted.
+
+#+CAPTION: Error curves for the absolute and relative error metrics
+[[file:absVsrel.jpg]]
+
+MSPE stands for Mean Square Percentage Error, and MAPE for Mean Absolute
+Percentage Error. They can also be thought of as weighted versions of
+MSE and MAE respectively. For MAPE the weight is inversely proportional
+to the target $y_i$, while for MSPE it is inversely proportional to its
+square. Note that the weights do not sum up to one. Looking at
+Fig. [[#fig:absVsRel][4]] we see that the curves become flatter as the
+value becomes larger. In other words, the price we pay for an absolute
+error depends on the target value, and as the target increases, we pay
+less. Let's find the optimal constant predictions for these metrics. For
+MSPE it is the /weighted mean/ of the target values. For MAPE the
+optimal constant is the /weighted median/ of the target values.
+
+The last regression metric we will consider is (R)MSLE, the (Root) Mean
+Square Logarithmic Error. It is defined as shown below. We add a
+constant to avoid problems with logarithms. The constant in the
+expression below equals 1, but it can be any other value.
+
+$$\begin{aligned}
+\mathrm{RMSLE} &= \sqrt{\frac{1}{N} \sum_{i = 1}^{N} \left(\log (y_i  + 1) -
+\log(\hat y_i + 1) \right)^2}\\
+&= \mathrm{RMSE}(\log(y_i + 1) - \log(\hat y_i + 1))\\
+&= \sqrt{\mathrm{MSE}(\log(y_i + 1) - \log(\hat y_i + 1))}\end{aligned}$$
+
+This metric is used in the same situations where we would use MSPE or
+MAPE, but the error curves are asymmetric, and this implies that,
+according to RMSLE, it is always better to predict more than less (by
+the same amount) than the target value. The square root version, RMSLE,
+is more commonly used than MSLE. What is the best constant prediction
+for this metric? It will be the best constant for RMSE in the log space,
+/i.e./, the mean value. To get the optimal constant in linear space we
+need to exponentiate.
+
+Given the small dataset discussed previously, we can summarized the
+numeric values of the optimal constants in
+Tab. [[#tab:bestConstants][1]]. MSE and RMSLE are biased towards large
+targets, while MAE is much less so. MSPE and MAPE are biased towards
+small targets, while RMSLE is considered better since it is much less
+biased than MAPE.
+
+<<tab:bestConstants>>
+| Metric | Constant |
+|--------+----------|
+| MSE    | 11       |
+| RMSLE  | 9.11     |
+| MAE    | 8        |
+| MSPE   | 6.6      |
+| MAPE   | 6        |
+#+CAPTION: Optimal constants for the metrics seen so far.
+
+Take a look at the notebook
+[[https://www.coursera.org/learn/competitive-data-science/notebook/NVBV7/a-note-about-weighted-median][a
+note about weighted median]].
+
+*** Classification Metrics
+    :PROPERTIES:
+    :CUSTOM_ID: sec:ClassifMetrics
+    :END:
+
+We will consider accuracy, logarithmic loss, AUC and (quadratic
+weighted) Cohen's Kappa. Let's fix some notation first, as shown in
+Tab. [[#tab:notation][2]].
+
+<<tab:notation>>
+| N         | Number of objects  |
+| L         | Number of classes  |
+| y         | Ground truth       |
+| $\hat y$  | Predictions        |
+| $[a = b]$ | Indicator function |
+#+CAPTION: Notation for this subsection.
+
+We will use two more terms: *hard labels* or /hard predictions/ and
+*soft labels* or /soft predictions/. Usually a model produces a vector
+of scores of size $L$, and we will refer to this vector as to /soft
+labels/. Typically, the class label is the result of an argmax
+operation, and these are the /hard labels/. Therefore the hard labels
+are functions of the soft labels. In the binary case, the $\argmax$ is
+usually replaced by a threshold.
+
+Accuracy is the most straightforward classification metric, and is
+defined as shown in Eq. [[#eq:accuracy][[eq:accuracy]]], and count the
+frequency of correct predictions.
+
+$$\mathrm{Acc} = \frac{1}{N} \sum_{i = 1}^{N} [\hat y_i = y_i]
+\label{eq:accuracy}$$
+
+To compute accuracy we need hard labels. What is the best constant to
+optimize accuracy? We have only $L$ possibilities, /i.e./, we can only
+try one of the class labels. It's then clear that we should use the most
+common label. This, however, shows the main limitation of accuracy as a
+metric. If in our data-set we have 10 dogs and 90 cats, if we predicted
+everything as a cat, we would have 0.9 accuracy. Moreover, despite
+simple and intuitive, accuracy is very hard to optimize directly, and it
+doesn't take into account how confident the model is when taking a
+decision, since it works only on hard labels. This is why people
+normally optimize different metrics, which are easier to optimize, and
+use soft labels. One of such metrics is the LogLoss, defined, for the
+binary case, as shown in Eq. [[#eq:BinaryLogLoss][[eq:BinaryLogLoss]]].
+
+$$\mathrm{LogLoss} = -\frac{1}{N} \sum_{i = 1}^{N} y_i \log (\hat y_i) +
+(1 - y_i) \log (1 - \hat y_i)
+\label{eq:BinaryLogLoss}$$
+
+In the binary case $y_i$ is a value between 0 and 1. For the multi-class
+case, the LogLoss is written as shown in
+Eq. [[#eq:MulticlassLogLoss][[eq:MulticlassLogLoss]]]
+
+$$\mathrm{LogLoss} = -\frac{1}{N} \sum_{i = 1}^{N} \sum_{l = 1}^{L} y_{il} 
+\log(\hat y_{il})
+\label{eq:MulticlassLogLoss}$$
+
+It is worth mentioning that, in practice, the LogLoss is based on
+/clipped/ values, and looks more like
+Eq. [[#eq:ClippsedLogLoss][[eq:ClippsedLogLoss]]].
+
+$$\mathrm{LogLoss} = -\frac{1}{N} \sum_{i = 1}^{N} \sum_{l = 1}^{L}
+y_{il} \log (\min (\max (\hat y_{il}, 10^{-15}), 1 - 10^{-15}))
+\label{eq:ClippedLogLoss}$$
+
+Let's look at a graph of the LogLoss, shown in
+Fig. [[#fig:LogLossPlot][5]]. Here we assume that $y_i = 0$, and we show
+how the error changes as we increase $\hat y_i$. For comparison we plot
+the absolute error. As we can see, the LogLoss hugely penalizes large
+mistakes, and prefers many small mistakes to single large ones.
+
+#+CAPTION: Plot of the LogLoss and, for comparison, of the absolute
+error.
+[[file:LogLossPlot.jpg]]
+
+What is the optimal constant for the LogLoss? It is actually a vector of
+length $L$ equal to the frequency of each class. So, for the example
+with 10 dogs and 90 cats, it would be $\alpha = [0.1, 0.9]$. This can be
+found by computing the gradient.
+
+The AUC metric differs from the previous ones because it does not base
+its decisions on a threshold, but rather "tries them all". This metric
+doesn't depend on the absolute values of the predictions, but only on
+the order of the objects. There are several ways to introduce the AUC.
+The first one is based on the Area Under the Curve (whence the name),
+while the second is based on the probability of object pairs of being
+correctly ordered by our model. Let's consider the example in
+Fig. [[#fig:AUC1][6]], where we have 7 objects to classify. Here our
+/positives/ are the /red/ dots. What we do is to start from the far
+left, and move one object at a time, counting how many red dots
+(positives) and green dots (negatives) are on the left of the current
+object (inclusive). The red dots on the left of the current dot are
+/true positives/ and the green dots are the /false positives/.
+
+#+CAPTION: Visual explanation of AUC.
+[[file:AUC1.jpg]]
+
+The AUC is 7/9 for this example. If our data-set could be perfectly
+separated by a threshold, the ROC curve would go immediately up to 1 and
+stay constantly equal to 1 across all thresholds. In such case, AUC = 1.
+If we performed our classifications completely at random we would have a
+diagonal ROC curve with AUC = 0.5. *QUESTION* how does this change if
+you had a very unbalanced data-set, for example the 10-dog 90-cat one?
+
+There is a completely different explanation for the AUC. Consider all
+pairs of objects such that one object is from the red class and one if
+from the green one. AUC is the probability that the score for the green
+one will be larger than the score for the red one. In other words AUC
+is:
+
+$$\begin{aligned}
+\mathrm{AUC} &= \frac{\# \text{correctly ordered pairs}}{\text{total number of pairs}}\\
+&= 1 - \frac{\# \text{incorrectly ordered pairs}}{\text{total number of pairs}}\end{aligned}$$
+
+Fig. [[#fig:AUC2][7]] shows this second interpretation of the ROC
+curves.
+
+#+CAPTION: Visual explanation of AUC as the number of correctly ordered
+pairs.
+[[file:AUC2.jpg]]
+
+What is the best constant prediction for the AUC? All constants will
+lead the same score, and this score will be 0.5, as AUC does not care
+about any constant. This is something that people like about AUC, since
+it defines a clear baseline.
+
+The last metric we will discuss is *Cohen's Kappa*. Remember that if our
+data-set is very unbalanced, we will have biased scores. In the 10-dog
+90-cat examples, all our models will have an accuracy between 0.9 and
+1.0. We can introduce a new metric such that for an accuracy of 1.0,
+will return 1, and for the baseline accuracy of 0.9, will return 0. In
+other words, we are using a score of the form:
+
+$$\mathrm{score} = 1 - \frac{1 - \mathrm{accuracy}}{1 - \mathrm{baseline}}$$
+
+Cohen's Kappa takes a slightly different baseline value. We take the
+hard predictions for the data-set, and we shuffle them, and we then
+calculate the accuracy for these shuffled predictions, and this will be
+our baseline. We do this many times and we use the average of these
+accuracies. In practice we don't do this permutation, but rather use the
+analytical formula shown in Fig. [[#fig:Kappa][8]]. In the example we
+have predicted 20 dogs and 80 cats, and the associated accuracy is 0.74.
+
+#+CAPTION: Cohen's Kappa.
+[[file:Kappa.jpg]]
+
+Since =error = 1 - accuracy=, we can rewrite Cohen's Kappa as:
+
+$$\mathrm{Kappa} = 1 - \frac{\mathrm{error}}{\mathrm{baseline}}
+\label{eq:Kappa2}$$
+
+Let's now introduce the *weighted Cohen's Kappa*. In our example we have
+three classes, =cats=, =dogs= and =tigers=. We don't mind misclassifying
+a cat for a dog or vice-versa, but we want to penalize the case when we
+misclassify a tiger. This is shown in Fig. [[#fig:weightedErrors][9]].
+
+#+CAPTION: Weighted errors
+[[file:weightedErrors.jpg]]
+
+To obtain the weighted error scores we need to multiply the confusion
+matrix with the weight matrix and sum the resulting values, as shown in
+Fig. [[#fig:weightedScores][10]]. The weighted Kappa is then defined as
+shown below.
+
+#+CAPTION: Weighted Scores
+[[file:weightedScores.jpg]]
+
+In many cases the weight matrices are defines in simple ways, for
+example for classification problems with ordered labels. Suppose we are
+trying to predict disease severity, as measured on a scale 1, 2, 3.
+These problems are generally treated as classification problems, but
+weight matrices are introduced to take the ordering of the labels into
+account. Weights could be linear: if we predict 2 instead of one, we pay
+1. If we predict 3 instead of 1, we pay 2. Or they could be quadratic,
+where we would pay 4 if we predicted 3 instead of 1. This is illustrated
+in Fig. [[#fig:quadKappa][11]].
+
+#+CAPTION: Linear and quadratic Kappa.
+[[file:quadKappa.jpg]]
+
+Quadratic weighted Kappa has been used in a number of Kaggle
+competitions, to compare predictions with ground-truth raters, and are
+commonly used for inter-rater agreement. Summarizing:
+
+- Accuracy :: is an essential metrics, but a trivial model that produces
+  a constant prediction may have a very high score. The score also
+  depends on the threshold we use to convert soft predictions to hard
+  labels.
+
+- LogLoss :: depends on soft predictions and forces the model to predict
+  probabilities.
+
+- AUC :: does not depend on the absolute values returned by the
+  classifier, but only on the ordering of the results. It also
+  implicitly tries all thresholds to convert soft to hard predictions.
+
+- Cohen's Kappa :: fixes the baseline for the accuracy score to zero. If
+  instead of accuracy we used weighted accuracy, we would have weighted
+  Kappa. Quadratic weights produce Quadratic Weighted Kappa
+
+*** General approaches for metrics optimization
+    :PROPERTIES:
+    :CUSTOM_ID: sec:metricsOptimization
+    :END:
+
+We will discuss the difference between loss and metric. The *target
+metric* is what /we want to optimize/. For example, in a classification
+task we may want to optimize the accuracy. The problem is that it's not
+possible to directly optimize the accuracy. This is why we come up with
+an *optimization loss* which is what /the model optimizes/. For example,
+the LogLoss is a widely used loss, and accuracy is the criterion used to
+finally evaluate the performance of the model. In some cases we can
+directly optimize the target metric, and the loss and the metric
+coincide. This is, for example, the case for the squared error. In other
+case it is impossible to optimize the target metric, and we must rely on
+heuristics and tricks to mitigate the discrepancy between loss and
+metric. In this course the terms /loss/, /cost/, /objective/ will be
+used interchangeably.
+
+Let's review the fundamental steps in target metric optimization.
+
+- Direct optimization :: when the metric and the loss coincide, for
+  example when we are using MSE or LogLoss as a metric, we can optimize
+  them directly.
+
+- Pre-processing and indirect optimization :: for metrics that cannot be
+  directly optimized, we can pre-process our data such that we can use
+  loss functions that are easier to optimize. For example, MSPE cannot
+  be optimized in XGBoost but, as we will see later, it is possible to
+  resample the training set and use MSE instead.
+
+- Post-processing and indirect optimization :: sometimes we must
+  optimize the /wrong/ loss function, but we can reduce the discrepancy
+  with an appropriate post-processing of the predictions so that they
+  fit the competition metric better. This is, for example, the case for
+  the Cohen's Kappa.
+
+- Custom loss function :: sometimes it is possible to define a custom
+  loss function that will serve as a nice proxy for the desired metric.
+  This is the case, for example, for the Quadratic Kappa.
+
+It is relatively simple to write custom loss functions for XGBoost. The
+function must take the predictions and the target values as inputs, and
+must compute the first and second derivative of the loss function with
+respect to the model predictions. Obviously the loss function should be
+smooth enough so that one can compute the gradient and the hessian.
+
+When nothing else works, one can use *early stopping*. Say we want to
+optimize metric M2, but we cannot do it directly. We can instead
+optimize a metric M1, and we monitor the values of M1 as the
+optimization proceeds. We stop when the model starts overfitting
+w.r.t. M2 and not M1. See Fig. [[#fig:earlyStopping][12]].
+
+#+CAPTION: Visual representation of Early Stopping
+[[file:earlyStopping.jpg]]
+
+*** Regression metrics optimization
+    :PROPERTIES:
+    :CUSTOM_ID: sec:regressionMetricsOptimization
+    :END:
+
+In this section we will see how we can efficiently optimize metrics for
+regression problems.
+
+Almost any modeling software will implement MSE as a loss function, and
+this comprises XGBoost, LightGBM, CatBoost, Sklearn, and all Deep
+Learning libraries. By MSE we mean any L2 loss, including ridge
+regression, lasso, etc. Scikit-learn implements also a SGD optimizer for
+regression, called =sklearn.SGDRegressor=. MAE is also a popular metric.
+XGBoost, however, cannot optimize it because MAE has a zero second
+derivative, while LightGBM can. It is implemented in
+=sklearn.RandomForestRegressor=, but the runtime will be significantly
+higher than for MSE. Regression models from scikit-learn cannot optimize
+MAE natively, but there is a loss, called *Huber loss*, which is
+implemented in some of the models. It is similar to MAE, especially when
+the errors are large. It is implemented in Vowpal Wabbit under the name
+. In fact, MAE is a particular case of the quantile loss. As for DL
+libraries, we can use SGD to optimize MAE, and if such loss is not
+already part of the library, it is very easy to implement it. The only
+thing we need is the gradient which, as we have seen, is a step
+function. In general, we don't need to worry for the single point where
+the gradient is not defined. Other names we may encounter for MAE are
+L1, median regression etc.
+
+There are many ways to make MAE approximately smooth. Any smooth
+function that looks reasonably similar to MAE would work. A few examples
+are shown in Fig. [[#fig:HuberLoss][13]]. The most famous is Huber loss,
+which is a mix of MAE and MSE. MSE is used when the errors are small,
+and MAE is used when they are large.
+
+#+CAPTION: Smooth approximations to MAE
+[[file:HuberLoss.jpg]]
+
+Let's see the less frequently used metrics: MSPE and MAPE. It is more
+difficult to find models that can optimize them out of the box. We could
+either implement our own loss function for XGBoost or Neural Networks,
+or we may optimize a different metric and use early stopping. There are
+however some workarounds we can use, and they leverage the fact that
+MSPE is a weighted version of MSE, and that MAPE is a weighted version
+of MAE. This is illustrated in Fig. [[#fig:WeightedLoss][14]]. Most
+libraries accept weighted version of MSE and MAE, and we just need to
+set the weights as shown there.
+
+#+CAPTION: Connection between MSPE and MSE and between MAPE and MAE.
+[[file:WeightedLoss.jpg]]
+
+Not every library accepts weighted MSE and MAE, but there is one trick
+we can exploit. We just need to re-sample from the training set using
+the weights as sampling probabilities, for example by using
+=df.sample(weights=sample_weights=, and then using the optimizers for
+MSE or MAE. The size of the re-sampled data-set is up to us. It could
+be, for example, twice as large as the original data-set. Note that we
+don't need to do anything with the test set. This operation must be
+applied to the training set only. It is also recommended to re-sample
+multiple times, fit multiple models, and average the results. This will
+make the results significantly better. There is yet another way one can
+optimize MSPE, and this approach was widely used during the Rossmann
+competition. It can be proved that if the errors are small, we can
+optimize the predictions in logarithmic scale. There is a link in the
+reading material for more information.
+
+Finally, let's see how to optimize RMSLE. It turns out to be pretty
+easy, since we only need to convert our target variables
+$z_i = \log(y_i + 1)$ and fit a model with MSE loss. To obtain the
+prediction for the test set we need to do the inverse transformation
+$\hat y_i = \exp{\hat z_i} - 1$, where $\hat z_i$ is what we obtain from
+=model.predict=.
+
+*** Classification metrics optimization I
+    :PROPERTIES:
+    :CUSTOM_ID: sec:ClassificationOptimization1
+    :END:
+
+We will now consider how to optimize classification metrics. In this
+section we will consider LogLoss and accuracy, and in the next one AUC
+and (quadratic weighted) Kappa.
+
+LogLoss is implemented everywhere. One interesting exception is
+=sklearn.RandomForestClassifier=, as Random Forest predictions are
+usually quite bad in terms of LogLoss, but we can *calibrate* the
+predictions to better fit LogLoss. LogLoss produces posterior
+probabilities, therefore, if we take all objects with score of $.80$ we
+should expect, in the case of well calibrated probabilities, that 80% of
+the objects belong to class 1 and 20% to class 0. If the classifier
+doesn't directly optimize LogLoss, the predictions should be calibrated.
+In Fig. [[#fig:Calibration][15]], the blue line shows the predictions
+sorted by value, while the red line shows a rolling mean of the true
+target values. We see that the values on the blue line are too high on
+the left-hand side, and too low on the right-hand side. The green line
+shows the predictions after the calibration. There are several way to
+calibrate the predictions. The most common ones are Platt scaling,
+Isotonic regression and Stacking.
+
+- Platt Scaling :: consists in fitting a logistic regression to our
+  predictions.
+
+- Isotonic Regression :: consists in fitting an isotonic regression to
+  our predictions.
+
+- Stacking :: is a generalization of the two previous methods, and we
+  will cover it more extensively in another lesson. The idea is that we
+  can fit any classifier. It doesn't have to be good in terms of
+  LogLoss. It just has to be good, for example, in terms of AUC. We can
+  then take another model that will take the predictions from our model
+  and calibrate them properly. This model will use LogLoss as its loss,
+  and will optimize it directly, thus producing calibrated predictions.
+
+#+CAPTION: Example of probability calibration.
+[[file:Calibration.jpg]]
+
+LogLoss is the only metric that is easy to optimize directly. With
+accuracy, there is no general recipe for optimization. If we have a
+binary classification task, we can fit any metric and tune the
+"binarization" threshold. For multi-class models, optimize any metric,
+and tune parameters by optimizing the accuracy, rather than the original
+metric. In a way, it's a form of early stopping, where in the validation
+phase you look at the accuracy score.
+
+To have an intuition of why accuracy is difficult to optimize, we can
+look at Fig. [[#fig:Accuracy][16]]. Here we compare three different
+losses, where the *zero-one loss* (blue line) is the one used to
+optimize accuracy. In the zero-one loss we pay the same (unit) price for
+any error, and zero otherwise. The $x$ axis shows the signed distance
+$M$ from a separating hyperplane. The sign is positive if the
+observation is correctly classified, and negative otherwise. As we can
+see, the problem of the zero-one loss has zero gradient wherever it is
+defined, therefore there is no way for a learning algorithm to learn
+anything. This is why several *proxy metrics* like the one shown in the
+Figure, have been introduced. If we perfectly fit these proxy losses,
+the accuracy will be perfect too, but unlike the zero-one loss, they are
+differentiable. Logistic loss is used in logistic regression and hinge
+loss is used in SVM.
+
+#+CAPTION: The zero-one loss compared with the logistic and the hinge
+loss. Here $M$ represents the signed distance from the separating
+hyperplane.
+[[file:Accuracy.jpg]]
+
+In a binary prediction problem the predicted class is the $\argmax$ of
+the score. If the scores sum up to one, this argmax operation amounts to
+a probability threshold, assigning class 1 if the score is greater than
+0.5, and 0 otherwise. We have however already seen cases where a
+threshold of 0.5 is not optimal. We can tune our threshold, for example
+with a simple grid search. We could use logistic or hinge loss, the only
+thing that really matters is the existence of a good threshold that
+separates the classes. If our classifier were perfectly calibrated, the
+returned (normalized) scores would indeed be the posterior
+probabilities, and a cutoff of 0.5 would be optimal. This, however, is
+seldom the case.
+
+*** Classification metrics optimization II
+    :PROPERTIES:
+    :CUSTOM_ID: sec:ClassificationOptimization2
+    :END:
+
+Although the AUC loss has zero gradient almost everywhere, just like the
+accuracy loss, there is a way to optimize it using gradient-based
+methods. There is more than one way to achieve this optimization, so we
+will just outline the main idea here. The loss we optimize is the
+aggregation of /point-wise/ losses, where we consider each observation
+independent. Let's recall that AUC is the probability of a pair of
+observations of being correctly ordered, so we want the predictions for
+the positive class to be larger than the negative class. This is why, in
+optimizing AUC, we will be working with /pairs/ of observations, and we
+will consider a /pairwise/ loss. We want therefore to minimize something
+of the form:
+
+$L = \sum_{i}^{N} \sum_{j}^{N} l_{\mathrm{pair}} (\hat y_i, \hat y_j; y_i, y_j)$
+
+In theory the loss should be zero when the ordering is correct, and
+greater than zero when it is incorrect. In practice, there are various
+losses we can use. We could, for example, use the LogLoss as shown in
+Eq. [[#eq:AUCLogLoss][[eq:AUCLogLoss]]]. Here we want the difference
+between a positive and a negative examples to be always 1. The prob term
+in the equation is needed to make sure that the difference is still in
+the 0-1 range, and is shown just for the sake of simplicity.
+
+$$L = -\frac{1}{N_1 N_2} \sum_{j:y_j = 1}^{N_1} \sum_{i:y_i = 0}^{N_0} \log{\mathrm{prob} (\hat y_j - \hat y_i))$$
+
+XGBoost and LightGBM have implementations of this method out of the box,
+and it is very easy to implement for the various Neural Network
+libraries, and you can find implementation online.
+
+Note that most people still use LogLoss as the loss function, without
+going through the pairwise loss. Dmitry says that, in his experience,
+optimizing LogLoss produces similar results, in terms of AUC, to those
+obtained with the pairwise loss.
+
+The Quadratic Weighted Kappa (QWK) metric can be optimized in two main
+ways: the first one is easy and commonly used, while the second one is
+less common, and requires the implementation of a custom loss function.
+The authors of the course, however, have already implemented it for
+XGBoost, and you can find the implementation in the reading material.
+
+Let's see the simpler approach. We use QWK when we have a multi-class
+problem, with possibly ordered labels. We somehow treat this as a
+regression problem with some post-processing steps to deal with results
+that fall in between two labels (represented as integers). When using
+quadratic weights, the problem becomes similar to a regression problem
+we optimize by means of MSE if we allow the predictions to take values
+between the labels, /i.e./, if we allow to *relax* the predictions. As
+shown in Fig. [[#fig:OptimizeKappa][17]], Kappa can be expressed as one
+minus a fraction with MSE in the numerator and something that depends on
+the predictions in the denominator. The naive approach would be to
+ignore such dependency in the denominator, and try to optimize the whole
+expression just optimizing MSE. This is not correct, but is still a
+useful way to think about it. MSE produces floating point values, but we
+need integers. The simplest approach would be to round the predictions,
+but we can think of rounding as of applying a threshold, /e.g./, if the
+value is between 3.5 and 4.5 than output 4. Instead of using manually
+selected threshold, we can optimize them, for example with grid search.
+Summarizing, the process consists in 1) applying the MSE loss and 2)
+finding the optimal thresholds.
+
+#+CAPTION: Main ideas behind the optimization of Quadratic Weighted
+Kappa.
+[[file:OptimizeKappa.jpg]]
+
+There is a [[https://arxiv.org/abs/1509.07107][paper]] that suggests a
+way to directly maximize QWK, while dealing with the hard-to-handle part
+of the denominator. The paper is clearly written, and you can find
+implementations of the method on-line.
+
+** Week 4: Hyperparameter Tuning
+   :PROPERTIES:
+   :CUSTOM_ID: sec:week4
+   :END:
+
+*** Hyperparameter tuning I - Dmitry Ulyanov
+    :PROPERTIES:
+    :CUSTOM_ID: sec:HparamTuning1
+    :END:
+
+We will discuss hyperparameter tuning in general, introducing a general
+pipeline, and various ways to tune hyperparameters. We will see how to
+understand whether and how a hyperparameter influences the model. We
+will then talk about specific libraries, and in particular:
+
+- Tree based models :: GBDT, XGB, LightGBM, CatBoost, RandomForest,
+  ExtraTrees.
+
+- Neural Networks :: PyTorch, TensorFlow, Keras etc.
+
+- Linear Models :: Logistic Regression, SVM, Vowpal Wabbit, FTRL.
+
+A class of models that we will not cover here, but that you should
+explore on your own, are *Factorization Machines*, and libraries like
+and . In order to tune hyperparameters we need to follow these three
+steps:
+
+1. For any given model, there are usually way too many parameters to
+   optimize, and we cannot realistically optimize them all. It is
+   therefore crucial to identify which are the most influential
+   parameters. In the case of XGBoost, we may search what set of
+   parameters people usually set, by looking on the documentation, on
+   GitHub, SO etc.
+
+2. Understand how such parameters influence the model, /i.e./, how
+   increasing the value of a parameter changes the training and
+   validation scores.
+
+3. Finally we need to tune the parameters. There are automated
+   approaches, like =hyperopt= etc, but many (good) people prefer to
+   tune the parameters manually in an iterative process.
+
+There are several libraries one can use for automated hyperparameter
+optimization. Dmitry didn't try them all, but from what he saw, he
+couldn't spot any major difference in run time.
+
+- Hyperopt
+
+- Scikit-optimize
+
+- Spearmint
+
+- GPyOpt
+
+- RoBO
+
+- SMAC3
+
+To use these functions you need to define a function that runs your
+model with a given set of parameters, and return the validation score,
+and a search space. These operations can take a long time, so it's
+customary to run them overnight. Fig. [[#fig:HyperOpt][18]] shows an
+example of use of =hyperopt=.
+
+#+CAPTION: Example of use of the HyperOpt library
+[[file:HyperOpt.jpg]]
+
+What does it mean to understand how a hyperparameter affects a model?
+Different values of parameters result in three different fitting
+behaviours.
+
+1. Underfitting: the model is so contstrained that it cannot even learn
+   the training set.
+
+2. Overfitting: the model is so flexible that it can learn even the
+   noise from the training set, but it then fails to generalize.
+
+3. Good fit and generalization: this is what we want.
+
+We should therefore whether, with the current values of the
+hyperparameters, our model is under or over fitting, and change the
+parameters accordingly. We can split our parameters into two groups.
+
+1. Parameters that, when increased, reduce overfitting. These parameters
+   make the model more constrained, and we need to decrease them to
+   increase flexibility. We will indicate these parameters in red.
+
+2. Parameters that, when increased, produce a better fit on the training
+   set. You should increase them if your model is underfitting. We will
+   indicate these parameters in green.
+
+*** Hyperparameter tuning II
+    :PROPERTIES:
+    :CUSTOM_ID: sec:HparamTuning2
+    :END:
+
+In this section we will talk about hyperparameter tuning for tree-based
+models. Fig. [[#fig:TreeBasedModels][19]] summarizes the most commonly
+used ones. RGF stands for *Regularized Greedy Forests*, and it has
+performed very well in a number of competitions, but its implementation
+is very slow and quite difficult to use.
+
+#+CAPTION: List of the most commonly used tree based model libraries.
+[[file:TreeBasedModels.jpg]]
+
+Image [[#fig:TreeParams][20]] shows the most important parameters for
+XGBoost and LightGBM. The correspondence between the parameters is not
+always 100% accurate, but it gives an idea. These methods build
+sequences of decision trees, gradually optimizing a given objective.
+There are many parameters that control the tree-building process.
+
+#+CAPTION: List of the main parameters for XGBoost and LightGBM. In
+green, the parameters that increase the model's flexibility. In red,
+those that reduce it.
+[[file:TreeParams.jpg]]
+
+- max_depth :: is the maximum depth of the trees. The deeper the tree,
+  the better the fit, so increasing this parameter will lead to a better
+  fit to the training set. Depending on a task, the optimal value of
+  this parameter can vary a lot (in the example, from 2 to  30). If
+  increasing the value the model improves withtout overfitting, this can
+  be an indication that there are a lot of interactions in the data, in
+  which case it's better to stop tuning and generate more features.
+  Dmitry recommends to start with a =max_depth= of about 7. In LightGBM
+  it's possible to control the number of leaves in the tree, instead of
+  the depth. This is nice, since it can lead to deep trees with a small
+  number of leaves, reducing the risk of overfitting.
+
+- subsample :: controls the fraction of observations in the training set
+  to use when building the trees, and it has a value between 0 and 1.
+  One can think that it's always better to use all the observations, but
+  in practice it turns out that it's not, and using a fraction of
+  objects reduces the risk of overfitting. It will fit slower on the
+  training set, but it will generalize better.
+
+- colsample_bytree :: operates similarly, but uses a subset of the
+  features, not of the observations. A similar parameter is
+  =colsample_bylevel=. Again, if the model is overfitting, you can try
+  to reduce these values.
+
+- min_child_weight, lambda, alpha :: are all regularization parameters,
+  the most important of which is =min_child_weight=. Dmitry says that in
+  his experience this is one of the most important parameters to tune in
+  XGBoost and in LightGBM. Depending on the taks, the optimal value can
+  be anything between 0 to 300, so feel free to explore a broad range of
+  values.
+
+- eta, num_round :: is a learning rate, like in GD, while =num_round=
+  says how many learning steps we want to execute or, in other words,
+  how many trees we want to build. At each iteration a new tree is
+  learned and added to the model with learning rate =eta=. The higher
+  the value of =eta= the faster the model fits to the training set, and
+  possibly overfits. Similarly, the more training steps, the better the
+  fit. With a too large learning rate the model will not fit at all, and
+  will not converge. We must therefore make sure that we are using a
+  sufficiently small learning rate. On the other hand, if the learning
+  rate is too small, it will learn too slowly. We could freeze =eta= to
+  0.1 or 0.01 and then check how many rounds we need to train until we
+  overfit. We usually use early stopping for this: we monitor the
+  validation loss, and we stop training when it starts increasing. When
+  we have found the right number of rounds, we can use a trick that
+  usually improves the score: we multiply the number of steps by a
+  factor $\alpha$, /e.g./ 2, and we divide =eta= by the same factor. Now
+  the training will take longer, but it will usually generalize better.
+  The other parameters may need to be adjusted too, but it's usually OK
+  to leave them unchanged. You may also want to take into account the
+  random seed, as you want to make sure that changing the random seed
+  doesn't change the results too much. If it does, it's probably a
+  problem with the competition or with your validation scheme, not with
+  the model.
+
+Let's now explore Random Forests and ExtraTrees, which are a more
+randomized version of Random Forests and have pretty much the same
+parameters and we will use the term Random Forest to refer to both
+methods. Both RF and XGB build trees one after the other, but unlike
+XGB, trees in RF are independent of each other, which means that
+building many trees does not lead to overfitting. In Scikit-Learn, the
+number of trees is controlled by the parameter =n_estimators=. At the
+beginning we therefore may want to know what is a /sufficient/ number of
+trees for our purposes. Dmitry usually sets this parameter to a small
+value, say 10, to see how long it takes to train that many trees to the
+data. If it doesn't take too long, it sets it to a large value, say 300,
+and plots the metric vs the number of estimators to have a visual idea
+of how the training proceeds, and select a reasonable value, after which
+the performance doesn't seem to change much. Before submitting to the
+leaderboard, you can increase this number, just to be safe.
+
+Similar to XGB, there is a =max_depth= parameter that controls the depth
+of the trees, but unlike XGB it can be set to =None=, which means,
+unlimited depth. This can be useful when the features in the dataset
+have repeated values and important interactions. In other cases, models
+with unconstrained depth will overfit immediately. Dmitry recommends to
+start with a depth of about 7. Usually the max depth for RF is higher
+than for XGB, so feel free to try higher values.
+
+=max_features= is similar to =colsample= for XGB. The more features we
+use, the faster the training. =min_sampes_leaf= is a regualization
+parameter analogous to =min_child_weight= for XGB and to mean data in a
+leaf for LightGBM.
+
+For RF we can select a criterion for a split in a tree via a =criterion=
+parameter. It can be either Gini or Entropy. Dmitry says that Gini works
+better more often, but there are cases where entropy works better. You
+should try both. You can set the random seed with =random_state= and,
+importantly, you can use =n_jobs= to use multiple cores (by default, RF
+uses only one).
+
+*** Hyperparameter tuning III
+    :PROPERTIES:
+    :CUSTOM_ID: hyperparameter-tuning-iii
+    :END:
+
+[[#sec:HparamTuning3][[sec:HparamTuning3]]]
+
+In this section we will see how to set the hyperparamters for a NN.
+Dmitry recommends PyTorch and Keras, and he will discuss only dense
+networks. The two first parameters of interst are the number of neurons
+per layer and the number of layers. Dmitry recommends to start with
+start with something simple, like one or two hidden layers and 64 units
+per layers, make sure that training and validation scores are going
+down. Then, find a configuration that overfits the training set, and at
+that point fine tune network. One crucial parameter is the optimization
+method. Adaptive methods (Adam, AdaDelta, AdaGrad etc) allow faster
+training, but also lead to overfitting more easily. SGD converges more
+slowly, but usually generalizes better. What should we expect by using
+larger batch size? More overfitting or underfitting? It turns out that
+we end up with more overfitting. Dmitry says that a batch size of 512 is
+too large, and recommends using batches of size 32 or 64. If you see
+that a network is overfitting, try to decrease the batch size, and vice
+versa if it's underfitting. If the number of epochs is fixed, half a
+batch size determines twice as many updates oof the network, therefore
+you may need to change the number of epochs. If the batch size is too
+small, the gradients will be too noisy.
+
+The learning rate depends on the other parameters, and should not be
+either too large or too small. Dmitry usually starts with a large
+learning rate, say 0.1, and then reduces it until the network converges.
+There is a connection between the learning rate and the batch size, and
+it's been proven theoretically for a certain type of networks. If you
+increase the batch size by a factor $\alpha$, you can also increase the
+learning rate by the same factor. Remember however that the larger the
+batch size, the more prone the network is to overfitting, and you'll
+need some good regularization.
+
+When the network starts overfitting, you can use dropout, varying the
+dropout probability and where the dropout layer occurs. People tend to
+add dropout closer to the end of the netowrk, but it's OK to add it a
+bit to every layer. Dmitry strongly advises against having dropout as
+the very first layer, as it may cause some important information to be
+lost.
+
+*Static dropconnect* is a technique that Dmitry has used in some
+competitions. Consider the network in
+Fig. [[#fig:StaticDropconnect][21]]. We start creating a first hidden
+layer that is much larger than what we would normally use, say 4096
+nodes instead of 64. This network would immediately overfit. To
+regularize it we will drop 99% of the connections between the input
+nodes and the first hidden layer. Unlike dropout, we fix the
+connectivity pattern at the beginning and we don't touch it any more
+during the whole duration of the training phase. This forces the number
+of parameters in the first layer to be small. The number of connections
+between the first and the second hidden layers will still be large, but
+this turns out to be OK in practice. It's called static drop connect
+because in standard drop connect we drop connections at random at each
+learning iteration. This is a powerful regularization technique, and
+works well in practice.
+
+#+CAPTION: Example of a network with a huge first hidden layer, where we
+drop 99% of the connections between the input and the first hidden layer
+from the beginning.
+[[file:StaticDropconnect.jpg]]
+
+The last class of models we will consider are linear models. A well
+trained GBM will usually outperform an SVM even on a large sparse
+dataset. However, SVMs will require almost no tuning, which is useful.
+Scikit-Learn supports SVC and SVR by wrapping the =libLinear= and
+=libSVM= libraries. The latest release of =libLinear= supports multicore
+processing, but unfortunately the version wrapped in Scikit-Learn does
+not, therefore, you need to compile the library yourself for that
+purpose. An interesting comment from Dmitry is that he hasn't hear of
+anyone using Kernel SVM lately, and this is why he will only focus on
+linear SVMs. Scikit-Learn also implements Logistic Regression and Linear
+Regression plus regularized versions of them, as well as SGD versions.
+For models that do not fit in memory we can use Vowpal Wabbit. An online
+method of learning FTRL (Follow The Regularized Leader), was very
+popular some time ago, and is implemented in VW but there are many other
+in pure Python.
+
+The regularization hyperparameters we need to learn are usually the L2
+and L1 parameters (=alpha= and =lambda=), and the =C= parameter for SVM,
+which works in the opposite direction (the higher the value, the lower
+the regularization). Dmitry usually starts with a very small value of
+=C=, say $10^{-6}$ and he increases it by factors of 10. This because
+SVC becomes slower as =C= increases. He also suggests to try L1, L2 and
+L1 + L2 and see which one works best.
+
+Finally, Dmitry has three interesting general tips.
+
+- Do not spend too much time on hyperparameter tuning :: especially at
+  the beginning of the competition. You cannot win a competition by
+  tuning hyperparameters. Feature selection, tricks, hacks etc can take
+  you much farther.
+
+- Be patient :: It can take thousands of rounds of GBDT or NNs to fit a
+  model properly. Dmitry says he has made the mistake several times of
+  not waiting long enough for a model to train to its full potential.
+
+- Average everything :: Run multiple models with different random seeds.
+  Use small deviations from the optimal parameters and average the
+  results. For example, if the optimal XGB =max_depth= is 5, average
+  models with values 4, 5, 6.
+
+** Practical Guide
+   :PROPERTIES:
+   :CUSTOM_ID: sec:PracticalGuide
+   :END:
+
+There are a lot of heuristics that people can only find by trial and
+error. In this section the instructors share a number of tips, each one
+in turn. Their approaches differ in several respects.
+
+*** Alexander Guschin
+    :PROPERTIES:
+    :CUSTOM_ID: sec:Guschin
+    :END:
+
+He suggests to start defining what your goals are when entering a
+competition. These can be:
+
+1. Learning more about a particular problem. In this case, look for
+   competitions on related data-sets and study the solutions.
+
+2. Getting acquainted with certain tools. For example, if you want to
+   learn more about CNNs, you can look for competitions focusing on
+   images.
+
+3. Hunting for a medal. You can check how many submission the
+   participants at the top of the LB have. If they are around a hundred,
+   this can be a clear sign of LB probing. Conversely, if there are
+   people with few submissions at the top, this may indicate that there
+   is a non trivial approach or a trick that only few have discovered.
+   If top teams are composed by a single person, you may have good
+   chances by finding a good team.
+
+Once you have chosen a competition and have familiarized with the data,
+start writing your ideas and what you want to try. Once you have done
+this, read the forums and highlight the interesting posts. Actively
+participate in discussions. Once you have rolled out your plan, start
+sorting them by priority. You could sort them by how promising they are,
+or by topic (metric optimization, feature generation etc). Pick an idea
+and try to understand what does and doesn't work and why. If you are
+using GBMs and it's working, maybe it's because you have categorical
+variables with a lot of unique values. In such case you may conclude
+that mean encoding may work well here.
+
+You can then switch to parameter tuning. Dmitry XXX likes to see
+everything as a hyperparameter (including the coefficients you multiply
+your submissions by, I guess during model averaging or similar). He
+likes to sort parameters by these three principles:
+
+1. Importance: sort from important to irrelevant. This may depend on
+   data structure, metric etc.
+
+2. Feasibility: how long does it take to tune these parameters? Rank the
+   easy ones higher.
+
+3. Understanding: do you know what these parameters are doing? Rank from
+   "I know what it's doing" to "I have no idea". Here it is important to
+   understand what each parameter will change in the whole pipeline. For
+   example, if we increase the number of features, we may want to change
+   the fraction of columns used by XGB.
+
+*** Dmitry Altukhov
+    :PROPERTIES:
+    :CUSTOM_ID: sec:Altukhov
+    :END:
+
+Every problem starts with data loading, and doing it right can save a
+lot of time. He starts with some data pre-processing like label encoding
+categorical variables and joining additional data. He then saves data
+into hdf5 or npy format. Running experiments requires a lot of kernel
+restarts, and you want to be able to reload your data quickly.
+
+Interesting point: by default pandas and numpy store data in 64 bit
+format. By converting to 32 bits, we can save a lot of memory. Pandas
+supports data reading by chunk.
+
+When it comes to performance evaluation, he's not a big fan of extensive
+validation. Even for medium sized data sets, he prefers to create a
+train-validation-test split rather than full CV. Only when you have hit
+a limit and you need marginal improvements, you should run full CV.
+Similar approach for model choice: he usually starts with LightGBM, look
+for some reasonably good parameters and evaluate the performance of his
+features. He uses early stopping, so he doesn't try to optimize the
+number of iterations. He advises against starting with RFs, SVMs and
+NNs, as they take too long to fit. He switches to tuning models,
+ensembling and stacking only when he is satisfied with feature
+engineering. He describes his approach as "fast and dirty, always
+better". Focus on what's important: the data. Do EDA, Google domain
+specific knowledge. Your code is secondary, and it doesn't make sense to
+spend a lot of time in creating nice classes and methods. They are just
+harder to change. Keep things simple and reasonable. At the end of a
+competition he only has a couple of notebooks for model training and one
+or two for EDA.
+
+*** Mikhail Trofimov
+    :PROPERTIES:
+    :CUSTOM_ID: sec:Trofimov
+    :END:
+
+He always starts with a very simple solution. The purpose of this is to
+debug the full pipeline from the very beginning, data rading, to the
+end, submission. You can often find pipelines in the competition
+information or in kernels. Read them carefully and write your own.
+
+He advises also the simple-to-complex approach when it comes to models.
+He prefers RFs rather than GBMs because they require almost no tuning.
+He recommends using best practices from software development:
+
+1. Use good variable names.
+
+2. Keep your research reproducible
+
+   - Fix random seed
+
+   - Write down exactly how you generated any new features
+
+   - Use version control
+
+3. Reuse your code at training and test stage. The same functions should
+   process the training and the test data-sets.
+
+4. Read domain knowledge articles to have ideas on how to create new
+   features.
+
+*** Dmitry Ulyanov
+    :PROPERTIES:
+    :CUSTOM_ID: sec:fourth
+    :END:
+
+He starts monitoring the forums and the kernels. Sometimes someone finds
+a bug in the data, and the whole data set is changed. He therefore never
+joins a competition at the very beginning. He then starts with a quick
+EDA and a simple baseline, checking for various leakages. He then uses
+several submissions to check whether validation scores correlate with
+the public leaderboard score. He comes up with a list of things to try
+at the beginning of the competition, and he tries "more or less" to
+follow it. Sometimes, he just tries to generate as many features as
+possible, and looks what helps and what doesn't. When tuning a model, he
+first makes the model overfit the training set, and only then, he
+constraints the model. There were cases where he couldn't reproduce his
+own code, so he is now very careful about reproducibility. Long
+execution times lead to global variables and global variables lead to
+bugs. He therefore recommends to restart the notebook from time to time.
+Use descriptive names and try to make your code as transparent as
+possible. He uses one notebook per submission, so he can always run the
+previous submission. He treats the submission notebook as scipts,
+running them from top to bottom ("run all"). He uses the following trick
+to re-use the same code on the validation and on the test data: he
+splits the training set into training and validation sets and saves them
+with the same structure as the training and test sets provided by the
+organizers. At the top of the notebook he creates variables with the
+path to the training and validation sets, and when he wants to create a
+submission, he has just to change the path. He also uses macros for
+frequent code, and has created his own module. He only specifies a model
+by its name, and the module produces all the output he needs.
+
+** KaZanova's competition pipeline part I
+   :PROPERTIES:
+   :CUSTOM_ID: sec:KaZanova1
+   :END:
+
+The pipeline is shown in Fig. [[#fig:KaZanovasPipeline][22]]. One days
+goes into understanding the problem and make the necessary preparation.
+Then one-two days to understand more about the data, what are the
+features and other characteristics that are useful to develop a good CV
+strategy. He will then spend all but the last 3-4 days on feature
+engineering and applying different models. When he starts this process,
+he isolates himself from the outside world for one week or so, ignoring
+what the other competitors are doing, to avoid being influenced. After
+about one week, he explores other people's kernels.
+
+#+CAPTION: KaZanova's pipeline
+[[file:KaZanovasPipeline.jpg]]
+
+In the last 3-4 days, he usually jump up in the leaderboard, and this
+happens because he is doing model ensembling.
+
+*** Understanding broadly the problem
+    :PROPERTIES:
+    :CUSTOM_ID: sec:TheProblem
+    :END:
+
+Is it an image problem? Sound? Tabular data? Text? Time series? This
+knowledge narrows down the type of software and hardware required, and
+more precisely CPUs, GPUs, RAM and disk space. He usually creates an
+Anaconda environment for each competition. An important question is what
+metric is being tested, and if there is any similar competition with a
+similar metric or type of data that he has worked on, so that he can
+capitalize on what he has already done.
+
+*** EDA
+    :PROPERTIES:
+    :CUSTOM_ID: sec:EDA
+    :END:
+
+He then checks how consistent the features are between the training and
+the test data. He plots distributions, histograms etc, and tries to see
+if there are discrepancies. If there are, he may need to remove the
+feature, or rescale it etc. Another thing he does is to plot features vs
+time, to understand the effect of the latter. He also plots features
+against the target variable also helps to understand what are the most
+predictive features, using univariate predictability metrics, like the
+*Information Value* (IV), AUC, R, cross-tabulations etc. This helps
+generating hypotheses about the data. He often bin numerical features to
+understand whether there are non-linearities (how does this help??) and
+correlation matrices.
+
+*** CV strategy
+    :PROPERTIES:
+    :CUSTOM_ID: sec:CVstrategy
+    :END:
+
+Some people managed to win just because they managed to find a good
+cross validation strategy. This means creating a validation approach
+that closely mimics what we are being tested on. Consistency is the
+key-word here. If time is important, we need to use a *time-based*
+validation. Not only we must use the past to predict the future, but we
+also need to use similar intervals. If the test data is three months in
+the future, we need to build a validation data-set of three months. Are
+there different entities between training and test data? For example,
+imagine there are different customers in train and test. If so, you need
+to create a *stratified validation*, /i.e./, you must create a
+validation set that contains customers that are not in the training set.
+Sometimes the train/test split are completely at random. If so, we do
+the same with the validation set, and any random type of cross
+validation (e.g. random K-fold) will do. Sometimes you have a mix of the
+above, e.g., temporal element and different customers, and you need to
+incorporate them all to have a good validation strategy. What he does is
+to first try a random validation and see how it compares with the
+leaderboard, and checks whether improvements in the cross validation
+strategy correspond to improvements in the leaderboard. If this doesn't
+happen, he investigates deeper.
+
+[sec:FeatureEngineering]
+
+You can see a list of feature engineering approaches in
+Fig. [[#fig:FE][23]]. He uses the term feature engineering to include
+pre-processing, dealing with missing values etc. He often goes to
+similar competitions and checks what he or other people have used as
+features. A lot of FE can be automated. As long as your CV strategy is
+consistent, you can try all sort of transformation in your validation
+environment, and you can be confident that what works in validation will
+work in test.
+
+#+CAPTION: KaZanova's feature engineering
+[[file:FE.jpg]]

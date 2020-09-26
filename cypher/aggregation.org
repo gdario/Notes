@@ -1,0 +1,40 @@
+* Aggregation in Cyper
+
+The =count(n)= method does not include =null= values. You can specify nodes, relationships, or properties in the parentheses.
+
+#+begin_src cypher
+//Query1: see the list of Twitter handle values for Person nodes
+MATCH (p:Person)
+RETURN p.twitter
+
+//Query2: count on the Person nodes (does not include null values)
+MATCH (p:Person)
+RETURN count(p.twitter)
+
+//Query3: count on the Person nodes
+MATCH (p:Person)
+RETURN count(*)
+#+end_src
+
+The =collect()= function aggregates values into a list. In the example below, we are collecting the list of friends of each node.
+
+#+begin_src cypher
+MATCH (p:Person)-[:IS_FRIENDS_WITH]->(friend:Person)
+RETURN p.name, collect(friend.name) AS friend
+#+end_src
+
+The =size()= function returns the number of items in a list of values.
+
+#+begin_src cypher
+//Query5: find number of items in collected list
+MATCH (p:Person)-[:IS_FRIENDS_WITH]->(friend:Person)
+RETURN p.name, size(collect(friend.name)) AS numberOfFriends
+
+//Query6: find number of friends who have other friends
+MATCH (p:Person)-[:IS_FRIENDS_WITH]->(friend:Person)
+WHERE size((friend)-[:IS_FRIENDS_WITH]-(:Person)) > 1
+RETURN p.name, collect(friend.name) AS friends, size((friend)-[:IS_FRIENDS_WITH]-(:Person)) AS numberOfFoFs
+#+end_src
+
+
+TO BE CONTINUED
