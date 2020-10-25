@@ -50,9 +50,11 @@ dtrain = xgb.DMatrix(x_train, label=y_train)
 dval = xgb.DMatrix(x_val, label=y_val)
 dtest = xgb.DMatrix(x_test, label=y_test)
 
-# Test run
-num_rounds = 5
-params = {'max_depth': 2, 'eta': 1, 'objective': 'binary:logistic'}
-bst = xgb.train(params, dtrain, num_rounds)
-# This model returns the class probabilities
-preds = bst.predict(dval)
+w = np.round((len(y) - y_train.sum()) / y_train.sum())
+evallist = [(dval, 'eval'), (dtrain, 'train')]
+param = {'max_depth': 2, 'eta': 1, 'objective': 'binary:logistic',
+         'scale_pos_weight': 10}
+bst = xgb.train(param, dtrain, 10, evallist, early_stopping_rounds=3)
+probs = bst.predict(dval, ntree_limit=bst.best_ntree_limit)
+ypreds = (probs > 0.5).astype(np.int)
+print(classification_report(y_val, ypreds))
