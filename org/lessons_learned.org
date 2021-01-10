@@ -24,3 +24,7 @@ The idea that results speak for themselves, and that they don't need to be polis
 - Find resources on public speaking.
 - Read books/watch videos on how to present data.
 - Read books/watch videos on how to make engaging presentations.
+
+* The best way to learn is to work on a project
+
+The best way to learn is to work on a project. You have learned more doing a Kaggle challenge than reading theory. As J. Howard says "Find your project, do it well, make it fantastic".
