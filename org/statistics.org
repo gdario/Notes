@@ -1,0 +1,11 @@
+* Harrell's "Statistical Errors in the Medical Literature"
+
+** [[https://www.fharrell.com/post/errmed/#pval][Misinterpretation of P-values and Main Study Results]]
+
+In a nutshell: the flaw is interpreting a non-significant p-value as evidence of lack of effect. In other words, the cited examples use "absence of evidence" as "evidence of absence". When, for example, a study returns P=0.2 and a 95% C.I. of [-9, 42], this means that the study is ruling out an effect larger than 92 or lower than -9. These numbers, depending on the context, may or may not be relevant, and the only conclusion is that the study was underpowered.
+
+** [[https://www.fharrell.com/post/errmed/#catg][Dichotomania]]
+** [[https://www.fharrell.com/post/errmed/#change][Problems With Change Scores]]
+** [[https://www.fharrell.com/post/errmed/#subgroup][Improper Subgrouping]]
+** [[https://www.fharrell.com/post/errmed/#serial][Serial Data and Response Trajectories]]
+** [[https://www.fharrell.com/post/errmed/#cluster][Cluster Analysis]]

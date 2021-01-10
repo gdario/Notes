@@ -1,0 +1,49 @@
+* R in Projects
+
+Much of the time spent on projects is actually wasted on technicalities that may be solved with a bit of study. Examples are:
+
+- Tidy evaluation.
+- Tidyverse.
+  - dplyr
+  - tidyr
+  - purrr
+  - lubridate
+  - stringr
+  - ...
+
+* Visualization (including animations)
+
+Find one or more galleries of impressive plots and learn how to make them.
+
+* Advanced R
+
+[[https://adv-r.hadley.nz/][Link to the online book]]
+
+** Tidy Evaluation
+
+*** Advanced R: Metaprogramming
+
+[[https://adv-r.hadley.nz/metaprogramming.html][Link to the chapter]].
+
+** S3 Classes
+
+*** Chapter on S3 in Advanced R ([[https://adv-r.hadley.nz/s3.html][link]])
+
+Implement some small but instructive classes that solve a real problem.
+
+* Tidyverse
+
+*** Row-wise operations
+
+[[https://github.com/jennybc/row-oriented-workflows][Jenny Bryan's row-oriented-workflows GH repo]].
+[[https://resources.rstudio.com/webinars/thinking-inside-the-box-you-can-do-that-inside-a-data-frame-april-jenny-bryan][Jenny Bryan's webinar]]
+
+*** R for Data Science ([[https://r4ds.had.co.nz/][link]])
+
+*** Functional Programming ([[https://dcl-prog.stanford.edu/][link]])
+
+Look at the section on purrr inside mutate.
+
+* Mastering Shiny
+
+[[https://mastering-shiny.org/][Link to the online book]].

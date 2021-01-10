@@ -1,0 +1,223 @@
+* Harrell's "Regression Modeling Strategies" [0%]
+
+. [ ] Introduction (12 pages)
+. [ ] General Aspects of Fitting Regression Models (32 pages)
+. [ ] Missing Data (18 pages)
+. [ ] Multivariable Modeling Strategies (40 pages)
+. [ ] Describing, Resampling, Validating, and Simplifying the Model (24 pages) 
+. [ ] R Software (16 pages)
+. [ ] Modeling Longitudinal Responses using Generalized Least Squares (18 pages)
+. [ ] Case Study in Data Reduction (20 pages)
+. [ ] Overview of Maximum Likelihood Estimation (38 pages)
+0. [ ] Binary Logistic Regression (56)
+1. [ ]Case Study in Binary Logistic Regression, Model Selection and Approximation: Predicting Cause of Death (16 pages)
+2. [ ]Logistic Model Case Study 2: Survival of Titanic Passengers (20 pages)
+3. [ ]Ordinal Logistic Regression (16 pages)
+4. [ ]Case Study in Ordinal Regression, Data Reduction, and Penalization (32 pages)
+5. [ ]Regression Models for Continuous Y and Case Study in Ordinal Regression (30 pages)
+6. [ ]Transform-Both-Sides Regression (10 pages)
+7. [ ]Introduction to Survival Analysis (24 pages)
+8. [ ]Parametric Survival Models (30 pages)
+9. [ ]Case Study in Parametric Survival Modeling and Model Approximation (22 pages)
+0. [ ]Cox Proportional Hazards Regression Model (46 pages)
+1. [ ]Case Study in Cox Regression (14 pages)
+
+* Geron's "Hands-on Machine Learning with Keras and Tensorflow 2.0" [%]
+
+. [ ] The Machine Learning Landscape
+. [ ] End-to-End Machine Learning Project
+. [ ] Classification
+. [ ] Training Models
+. [ ] Support Vector Machines
+. [ ] Decision Trees
+. [ ] Ensemble Learning and Random Forests
+. [ ] Dimensionality Reduction
+. [ ] Unsupervised Learning Techniques
+0. [ ] Introduction to Artificial Neural Networks with Keras
+1. [ ] Training Deep Neural Networks
+2. [ ] Custom Models and Training with TensorFlow
+3. [ ] Loading and Preprocessing Data with TensorFlow
+4. [ ] Deep Computer Vision Using Convolutional Neural Networks
+5. [ ] Processing Sequences Using RNNs and CNNs
+6. [ ] Natural Language Processing with RNNs and Attention
+7. [ ] Representation Learning and Generative Learning Using Autoencoders and GANs
+8. [ ] Reinforcement Learning
+9. [ ] Training and Deploying TensorFlow Models at Scale
+
+* McElreath's "Statistical Rethinking 2nd Ed" [%]
+
+. [ ] The Golem of Prague (18 pages)
+. [ ] Small Worlds and Large Worlds (20 pages)
+. [ ] Sampling the Imaginary (22 pages)
+. [ ] Geocentric Models (52 pages)
+. [ ] The Many Variables & The Spurious Waffles (38 pages)
+. [ ] The Haunted DAG & The Causal Terror (30 pages)
+. [ ] Ulysses’ Compass (46 pages)
+. [ ] Conditional Manatees (26 pages)
+. [ ] Markov Chain Monte Carlo (36 pages)
+0. [ ] Big Entropy and the Generalized Linear Model (24 pages)
+1. [ ] God Spiked the Integers (46 pages)
+2. [ ] Monsters and Mixtures (30 pages)
+3. [ ] Models With Memory (36 pages)
+4. [ ] Adventures in Covariance (54 pages)
+5. [ ] Missing Data and Other Opportunities (26 pages)
+6. [ ] Generalized Linear Madness (28 pages)
+7. [ ] Horoscopes (4 pages)
+
+* Zhou's "Deep Dive into Deep Learning" [%]
+
+[https://d2l.ai/index.html][Link]]
+
+. [ ] Introduction
+. [ ] Preliminaries
+. [ ] Linear Neural Networks
+. [ ] Multilayer Perceptrons
+. [ ] Deep Learning Computation
+. [ ] Convolutional Neural Networks
+. [ ] Modern Convolutional Neural Networks
+. [ ] Recurrent Neural Networks
+. [ ] Modern Recurrent Neural Networks
+0. [ ] Attention Mechanisms
+1. [ ] Optimization Algorithms
+2. [ ] Computational Performance
+3. [ ] Computer Vision
+4. [ ] Natural Language Processing: Pretraining
+5. [ ] Natural Language Processing: Applications
+6. [ ] Recommender Systems
+7. [ ] Generative Adversarial Networks
+
+* Jeremy Howard's "Deep Learning for Coders wtih Fastai and PyTorch" [%]
+
+. [ ] Your Deep Learning Journey
+. [ ] From Model to Production
+. [ ] Data Ethics
+. [ ] Under the Hood: Training a Digit Classifier
+. [ ] Image Classification
+. [ ] Other Computer Vision Problems
+. [ ] Training a State-of-the-Art Model
+. [ ] Collaborative Filtering Deep Dive
+. [ ] Tabular Modeling Deep Dive
+0. [ ] NLP Deep Dive: RNNs
+1. [ ] Data Munging with fastai’s Mid-Level API
+2. [ ] A Language Model from Scratch
+3. [ ] Convolutional Neural Networks
+4. [ ] ResNets
+5. [ ] Application Architectures Deep Dive
+6. [ ] The Training Process
+7. [ ] A Neural Net from the Foundations
+8. [ ] CNN Interpretation with CAM
+9. [ ] A fastai Learner from Scratch
+0. [ ] Concluding Thoughts
+
+* Murphy's "Probabilistic Machine Learning" [%]
+
+. [ ] Introduction
+. [ ] Probabilistic Inference
+. [ ] Probabilistic models
+. [ ] Parameter estimation
+. [ ] Optimization algorithms
+. [ ] Information theory
+. [ ] Bayesian statistics
+. [ ] Bayesian decision theory
+. [ ] Linear discriminant analysis
+0. [ ] Logistic regression
+1. [ ] Linear regression
+2. [ ] Generalized linear models
+3. [ ] Neural networks for unstructured data
+4. [ ] Neural networs for images
+5. [ ] Neural networks for sequences
+6. [ ] Exemplar-based methods
+7. [ ] Kernel methods
+8. [ ] Trees, forests, bagging and boosting
+9. [ ] Learning with fewer labeled examples
+0. [ ] Dimensionality reduction
+1. [ ] Clustering
+2. [ ] Recommender systems
+3. [ ] Graph embeddings
+
+* Stevens' "Deep Learning with PyTorch" [%]
+
+ [ ] Introducing deep learning and the PyTorch Library
+ [ ] Pretrained networks
+ [ ] It starts with a tensor
+ [ ] Real-world data representation using tensors
+ [ ] The mechanics of learning
+ [ ] Using a neural network to fit the data
+ [ ] Telling birds from airplanes: Learning from images
+ [ ] Using convolutions to generalize
+ [ ] Using PyTorch to fight cancer
+0 [ ] Combining data sources into a unified dataset
+1 [ ] Training a classification model to detect suspected tumors
+2 [ ] Improving training with metrics and augmentation
+3 [ ] Using segmentationto find suspected nodules
+4 [ ] End-to-end nodule analysis, and where to go next
+5 [ ] Deploying to production
+
+* Loeliger's "Version Control with Git 2nd Ed" [%]
+
+. [ ] Introduction
+. [ ] Installing Git
+. [ ] Getting Started
+. [ ] Basic Git Concepts
+. [ ] File Management and the Index
+. [ ] Commits
+. [ ] Branches
+. [ ] Diffs
+. [ ] Merges
+0. [ ] Altering Commits
+1. [ ] The Stash and the Reflog
+2. [ ] Remote Repositories
+3. [ ] Repository Management
+4. [ ] Patches
+5. [ ] Hooks
+6. [ ] Combining Projects
+7. [ ] Submodule Best Practices
+8. [ ] Using Git with Subversion Repositories
+9. [ ] Advanced Manipulations
+0. [ ] Tips, Tricks, and Techniques
+1. [ ] Git and GitHub
+
+* Bishop's "Pattern Recognition and Machine Learning" [%]
+
+. [ ] Introduction
+. [ ] Probability Distributions
+. [ ] Linear Models for Regression
+. [ ] Linear Models for Classification
+. [ ] Neural Networks
+. [ ] Kernel Methods
+. [ ] Sparse Kernel Machines
+. [ ] Graphical Models
+. [ ] Mixture Models and EM
+0. [ ] Approximate Inference
+1. [ ] Sampling Methods
+2. [ ] Continuous Latent Variables
+3. [ ] Sequential Data
+4. [ ] Combining Models
+
+* Other books
+** Personal Marketing
+
+1. Influence (4.19)
+
+** Product Development
+** Personal Development
+
+1. The Seven Habits ()
+2. Built to Last (4.01)
+
+** Productivity
+** Leadership
+
+1. Start with Why (4.08)
+
+** Enterpreneurship
+
+1. Zero to One (4.17)
+2. Good to Great (4.11)
+3. The E Myth Revisited (4.03)
+
+** Creativity
+
+1. Creativity Inc (4.21)
+2. The Innovator's Dilemma (4.01)
+

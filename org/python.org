@@ -1,0 +1,9 @@
+* Real Python
+
+** Python OOP
+
+- Implementing an interfacing in Python ([[https://realpython.com/python-interface/][link]])
+- Inheritance and composition ([[https://realpython.com/inheritance-composition-python/#implementation-inheritance-vs-interface-inheritance][link]])
+- The factory method ([[https://realpython.com/factory-method-python/][link]])
+
+* PyCharm course ([[https://training.talkpython.fm/courses/details/mastering-pycharm-ide][link]])

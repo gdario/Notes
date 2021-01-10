@@ -1,0 +1,43 @@
+* Dentist
+
+** DONE Pay the invoice 
+   CLOSED: [2020-12-30 Wed 09:32] DEADLINE: <2020-12-25 Fri>
+
+* Home Maintenance
+
+** DONE Errands [100%]
+   CLOSED: [2020-12-20 Sun 15:38]
+
+    - State "DONE"       from "TODO"       [2020-12-20 Sun 15:38]
+1. [X] Change battery in smoke alarm
+2. [X] Change bulbs in bathroom
+3. [X] Change the filter in the bathroom.
+4. [X] Sort tools/stuff in hall closet into boxes
+
+** Cleaning [50%]
+
+1. [X] Clean apartment
+2. [ ] Clean bathroom ceiling
+
+* Accounts and Payments
+
+** Subscriptions [%]
+
+1. [ ] Check if it's better to have mobile phones on the same invoice
+2. [ ] Check if it's better to have health insurances on the same invoice
+3. [ ] Check if we should have a different joint home insurance 
+
+** Accounts and payments [%]
+
+1. [ ] Close old PostFinance accounts
+2. [ ] Give Charlotte access to SwissQuote account
+3. [ ] Cancel old credit cards
+4. [ ] Change payment method to new credit card
+5. [ ] Giovanni’s subscriptions
+    1. O’Reilly ($199/year).
+    2. Google Drive (100$/year).
+    3. Spotify (CHF 19.90/month).
+
+* TODO Italian Documents
+
+** TODO Re-read what you need to renew your Italian driving license.
